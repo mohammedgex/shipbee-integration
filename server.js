@@ -12,9 +12,9 @@ const SHIPBEE_API_KEY = process.env.SHIPBEE_API_KEY || '6cl916m54wgm116spn12sz32
 const SHIPBEE_BASE_URL = process.env.SHIPBEE_BASE_URL || 'https://api.staging.shipbee.io';
 
 // إعدادات شوبيفاي (لازم تضيفهم في Environment Variables)
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || 'your-store.myshopify.com';
+const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || 'mofage-iq9btkui.myshopify.com';
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx';
-const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-10'; // أو أحدث نسخة مستقرة
+const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-10';
 
 // دالة مساعدة لتوليد تاريخ الشحن المطلوب (بكرة الساعة 10 صباحاً بتوقيت قطر +3)
 function getPlannedShippingDate() {
@@ -47,7 +47,6 @@ async function fulfillShopifyOrder(shopifyOrderId, trackingNumber, trackingCompa
             throw new Error('لا توجد Fulfillment Orders متاحة لهذا الطلب في شوبيفاي.');
         }
 
-        // بناخد أول fulfillment_order_id (لو فيه أكتر من واحد، ممكن نعدل عشان نعملهم كلهم)
         const fulfillmentOrderId = fulfillmentOrders[0].id;
 
         // ب) إنشاء الـ Fulfillment مع رقم التتبع
@@ -111,10 +110,11 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
 
         const shippingAddr = shopifyOrder.shipping_address;
 
-        // قص العناوين لـ 45 حرف كحد أقصى لشركة DHL
-        const street = (shippingAddr.address1 || "Street Name").substring(0, 45);
-        const district = (shippingAddr.address2 || "District Name").substring(0, 45);
-        const landmarks = (shippingAddr.company || "Near Landmark").substring(0, 45);
+        // ✅ التعديل هنا: قص العناوين لـ 45 حرف كحد أقصى لشركة DHL وضمان عدم وجود بيانات وهمية
+        const street = (shippingAddr.address1 || "Street 1").substring(0, 45);
+        const district = (shippingAddr.address2 || "District 1").substring(0, 45);
+        // DHL بتعتبر landmarks هي Address Line 1، فلو مفيش شركة هنستخدم العنوان الأول
+        const landmarks = (shippingAddr.company || shippingAddr.address1 || "Main Street").substring(0, 45);
         const zipCode = shippingAddr.zip || "00000";
 
         // ==========================================
@@ -122,8 +122,7 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
         // ==========================================
         const shipbeePayload = {
             serviceSubcategory: "International",
-            // عشان التيست يشتغل ويطلع Tracking فوراً، استخدم MONTHLY_BILL
-            // لو هتستخدم CREDIT_DEBIT، لازم تدفع من paymentUrl الأول
+            // MONTHLY_BILL عشان نطلع الـ Tracking فوراً
             paymentMethod: "MONTHLY_BILL",
             siteId: "express-staging",
 
@@ -211,7 +210,6 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
             if (paymentUrl) {
                 console.log(`[>] رابط الدفع: ${paymentUrl}`);
             }
-            // نرجع نجاح جزئي مع رابط الدفع
             return res.status(200).json({
                 success: true,
                 shipbeeOrderNo: shipbeeOrder.orderNo,
@@ -233,7 +231,6 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
             shopifyUpdateResult = await fulfillShopifyOrder(shopifyOrder.id, trackingNumber, trackingCompany);
         } catch (fulfillmentError) {
             console.error('[-] فشل تحديث شوبيفاي:', fulfillmentError.message);
-            // ممكن نرجع نجاح لـ ShipBee بس مع تحذير إن شوبيفاي مش اتحدث
             return res.status(207).json({
                 success: true,
                 shipbeeOrderNo: shipbeeOrder.orderNo,
