@@ -14,7 +14,7 @@ const SHIPBEE_BASE_URL = process.env.SHIPBEE_BASE_URL || 'https://api.staging.sh
 // إعدادات شوبيفاي (لازم تضيفهم في Environment Variables)
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || 'mofage-iq9btkui.myshopify.com';
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx';
-const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-10';
+const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2026-10';
 
 // دالة مساعدة لتوليد تاريخ الشحن المطلوب (بكرة الساعة 10 صباحاً بتوقيت قطر +3)
 function getPlannedShippingDate() {
