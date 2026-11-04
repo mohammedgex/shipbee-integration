@@ -124,7 +124,7 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
             serviceSubcategory: "International",
             // عشان التيست يشتغل ويطلع Tracking فوراً، استخدم MONTHLY_BILL
             // لو هتستخدم CREDIT_DEBIT، لازم تدفع من paymentUrl الأول
-            paymentMethod: "CREDIT_DEBIT",
+            paymentMethod: "MONTHLY_BILLING",
             siteId: "express-staging",
 
             senderName: "Doha Threads WLL",
