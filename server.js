@@ -248,21 +248,14 @@ function describeAxiosError(error, serviceName) {
         return `[${serviceName}] فشل الاتصال: ${error.message}`;
     }
     const { status, statusText, data } = error.response;
-    let bodyStr = '';
-    try { bodyStr = typeof data === 'string' ? data : JSON.stringify(data); } catch { bodyStr = String(data); }
-    return `[${serviceName}] HTTP ${status} ${statusText || ''} — ${bodyStr.substring(0, 400)}`;
-}
-
-function describeAxiosError(error, serviceName) {
-    if (!error.response) {
-        return `[${serviceName}] فشل الاتصال: ${error.message}`;
+    let bodyStr;
+    try {
+        bodyStr = typeof data === 'string' ? data : (JSON.stringify(data) || String(data));
+    } catch {
+        bodyStr = String(data);
     }
-    const { status, statusText, data } = error.response;
-    let bodyStr = '';
-    try { bodyStr = typeof data === 'string' ? data : JSON.stringify(data); } catch { bodyStr = String(data); }
     return `[${serviceName}] HTTP ${status} ${statusText || ''} — ${bodyStr.substring(0, 400)}`;
 }
-
 
 // ==========================================
 // 6. إرسال ShipBee
@@ -332,15 +325,20 @@ async function sendToShipBee(shopifyOrder) {
         }]
     };
 
-    const res = await axios.post(
-        `${SHIPBEE_BASE_URL}/api/orders`,
-        payload, {
-        headers: {
-            'x-api-key': SHIPBEE_API_KEY,
-            'Content-Type': 'application/json'
-        }
+    let res;
+    try {
+        res = await axios.post(
+            `${SHIPBEE_BASE_URL}/api/orders`,
+            payload, {
+                headers: {
+                    'x-api-key': SHIPBEE_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+    } catch (error) {
+        throw new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
     }
-    );
 
     return { payload, response: res.data };
 }
