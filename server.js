@@ -277,7 +277,7 @@ async function sendToShipBee(shopifyOrder) {
             length: 40,
             width: 30,
             height: 20,
-            itemCount: shopifyOrder.line_items ? .length || 1,
+            itemCount: shopifyOrder.line_items?.length || 1,
             totalValue: parseFloat(shopifyOrder.subtotal_price) || 100,
             description: 'Headphones & Earbuds',
             incoTerm: 'DDU',
@@ -285,7 +285,7 @@ async function sendToShipBee(shopifyOrder) {
             plannedShippingDateAndTime: getPlannedShippingDate(),
             lineItems: (shopifyOrder.line_items || []).map((item, i) => ({
                 number: i + 1,
-                description: item.title ? .substring(0, 50) || 'Item',
+                description: item.title?.substring(0, 50) || 'Item',
                 price: parseFloat(item.price) || 10,
                 quantity: { value: item.quantity || 1, unitOfMeasurement: 'PCS' },
                 weight: { netValue: 0.3, grossValue: 0.5 },
@@ -304,10 +304,10 @@ async function sendToShipBee(shopifyOrder) {
                 zipCode: addr.zip || '00000'
             },
             receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
-                shopifyOrder.customer ? .first_name ||
+                shopifyOrder.customer?.first_name ||
             'Guest',
             receiverPhoneNumber: addr.phone || shopifyOrder.phone,
-            receiverEmail: shopifyOrder.email || shopifyOrder.customer ? .email
+            receiverEmail: shopifyOrder.email || shopifyOrder.customer?.email
         }]
     };
 
@@ -335,7 +335,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         await pushLog({
             type: 'webhook_rejected',
             reason: 'HMAC invalid',
-            orderId: order ? .id
+            orderId: order?.id
         });
         return res.status(401).send('Unauthorized');
     }
@@ -344,9 +344,9 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         type: 'webhook_received',
         orderId: order.id,
         orderNumber: order.order_number,
-        customer: order.email || order.customer ? .email,
-        country: order.shipping_address ? .country,
-        city: order.shipping_address ? .city,
+        customer: order.email || order.customer?.email,
+        country: order.shipping_address?.country,
+        city: order.shipping_address?.city,
         total: order.total_price,
         currency: order.currency,
         shopifyPayload: order,
@@ -379,7 +379,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             return res.status(400).json(response);
         }
 
-        const shipment = response.data ? .shipment || {};
+        const shipment = response.data?.shipment || {};
         const tracking = shipment.trackingNumber;
 
         if (!tracking) {
@@ -408,8 +408,8 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
                 type: 'success',
                 orderId: order.id,
                 orderNumber: order.order_number,
-                customer: order.email || order.customer ? .email,
-                country: order.shipping_address ? .country,
+                customer: order.email || order.customer?.email,
+                country: order.shipping_address?.country,
                 total: order.total_price,
                 currency: order.currency,
                 tracking,
