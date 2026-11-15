@@ -15,11 +15,25 @@ app.use(express.json({
 // 1. الإعدادات - من Environment Variables فقط
 // ==========================================
 const SHIPBEE_API_KEY = process.env.SHIPBEE_API_KEY;
-const SHIPBEE_BASE_URL = process.env.SHIPBEE_BASE_URL || 'https://api.staging.shipbee.io';
+const SHIPBEE_BASE_URL = (process.env.SHIPBEE_BASE_URL || 'https://api.staging.shipbee.io').replace(/\/+$/, '');
 const SHOPIFY_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
-const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 const SHOPIFY_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01';
 const WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
+const DASHBOARD_USERNAME = process.env.DASHBOARD_USERNAME;
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
+const configuredCurrencyRates = JSON.parse(process.env.CURRENCY_TO_USD_RATES || '{}');
+
+if (!configuredCurrencyRates || typeof configuredCurrencyRates !== 'object' || Array.isArray(configuredCurrencyRates)) {
+    throw new Error('CURRENCY_TO_USD_RATES must be a JSON object');
+}
+for (const [currency, rate] of Object.entries(configuredCurrencyRates)) {
+    if (!/^[A-Z]{3}$/i.test(currency) || typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) {
+        throw new Error(`Invalid CURRENCY_TO_USD_RATES entry for ${currency}`);
+    }
+}
+const CURRENCY_TO_USD_RATES = Object.fromEntries(
+    Object.entries(configuredCurrencyRates).map(([currency, rate]) => [currency.toUpperCase(), rate])
+);
 
 // ✅ بيانات Mofage الحقيقية
 const SENDER = {
@@ -99,24 +113,40 @@ async function getLogs() {
 
 async function clearLogs() {
     if (kv) {
-        try { await kv.del(LOG_KEY); } catch (e) { /* ignore */ }
+        try {
+            await kv.del(LOG_KEY);
+        } catch (e) {
+            console.error('KV delete failed:', e.message);
+            throw new Error('Failed to clear persistent logs');
+        }
     }
     inMemoryLogs = [];
 }
 
-async function isOrderAlreadyProcessed(orderId) {
+async function findExistingShipBeeOrder(orderId) {
     const all = await getLogs();
-    return all.some(l =>
-        l.orderId === orderId &&
-        (l.status === 'success' || l.status === 'awaiting_payment')
-    );
+    const responseLog = all.find(log => {
+        const data = log.shipbeeResponse && log.shipbeeResponse.data;
+        return log.orderId === orderId &&
+            log.type === 'shipbee_response' &&
+            log.shipbeeResponse &&
+            log.shipbeeResponse.success &&
+            data &&
+            data.id;
+    });
+    if (!responseLog) return null;
+
+    return {
+        responseLog,
+        fulfilled: all.some(log => log.orderId === orderId && log.status === 'success')
+    };
 }
 
 // ==========================================
 // 3. HMAC Verification
 // ==========================================
 function verifyShopifyWebhook(req) {
-    if (!WEBHOOK_SECRET) return true;
+    if (!WEBHOOK_SECRET) return false;
     const hmac = req.get('X-Shopify-Hmac-Sha256');
     if (!hmac || !req.rawBody) return false;
     try {
@@ -133,10 +163,99 @@ function verifyShopifyWebhook(req) {
 // ==========================================
 // 4. مساعدات
 // ==========================================
-function getPlannedShippingDate() {
-    const t = new Date();
-    t.setDate(t.getDate() + 1);
-    return `${t.toISOString().split('T')[0]}T10:00:00 GMT+03:00`;
+function toUsd(value, currency) {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(`قيمة غير صالحة للتحويل من ${currency} إلى USD`);
+    }
+
+    const normalizedCurrency = String(currency || '').toUpperCase();
+    const rate = normalizedCurrency === 'USD' ? 1 : CURRENCY_TO_USD_RATES[normalizedCurrency];
+    if (!rate) {
+        throw new Error(
+            `لا يوجد سعر تحويل مضبوط للعملة ${normalizedCurrency} إلى USD في CURRENCY_TO_USD_RATES`
+        );
+    }
+
+    return Math.round(amount * rate * 100) / 100;
+}
+
+function getLineItemWeightKg(item) {
+    const grams = Number(item.grams);
+    if (!Number.isFinite(grams) || grams <= 0) {
+        throw new Error(`وزن المنتج غير موجود أو غير صالح: ${item.title || 'منتج بدون اسم'}`);
+    }
+    return grams / 1000;
+}
+
+function getDiscountedUnitPrice(item) {
+    const price = Number(item.price);
+    const quantity = Number(item.quantity);
+    const totalDiscount = Number(item.total_discount || 0);
+    if (!Number.isFinite(price) || price < 0 ||
+        !Number.isFinite(quantity) || quantity <= 0 ||
+        !Number.isFinite(totalDiscount) || totalDiscount < 0) {
+        throw new Error(`سعر أو كمية غير صالحة للمنتج: ${item.title || 'منتج بدون اسم'}`);
+    }
+
+    return price - (totalDiscount / quantity);
+}
+
+function getOrderWeightKg(order) {
+    const grams = Number(order.total_weight);
+    if (Number.isFinite(grams) && grams > 0) return grams / 1000;
+
+    const lineItems = order.line_items || [];
+    const itemGrams = lineItems.reduce((total, item) => {
+        const weight = Number(item.grams);
+        const quantity = Number(item.quantity);
+        return total + (Number.isFinite(weight) && weight > 0 && Number.isFinite(quantity) && quantity > 0 ?
+            weight * quantity : 0);
+    }, 0);
+    if (itemGrams <= 0) throw new Error('وزن الشحنة غير موجود أو غير صالح');
+    return itemGrams / 1000;
+}
+
+async function getDhlQuote(address, weightKg) {
+    if (!SHIPBEE_API_KEY) throw new Error('SHIPBEE_API_KEY غير مضبوط');
+
+    const params = {
+        serviceSubcategory: 'International',
+        fromCountry: SENDER.address.country,
+        fromCity: SENDER.address.city,
+        toCountry: address.country,
+        toCity: address.city,
+        weight: weightKg,
+        length: 40,
+        width: 30,
+        height: 20,
+        incoterm: 'DDU',
+        shippingCompany: 'DHL'
+    };
+    if (address.zip) params.toPostCode = address.zip;
+
+    let response;
+    try {
+        response = await axios.get(`${SHIPBEE_BASE_URL}/api/pricing/calculate`, {
+            params,
+            headers: { 'x-api-key': SHIPBEE_API_KEY }
+        });
+    } catch (error) {
+        throw new Error(describeAxiosError(error, 'ShipBee GET /api/pricing/calculate'));
+    }
+
+    const days = Array.isArray(response.data) ? response.data :
+        (response.data && Array.isArray(response.data.data) ? response.data.data : []);
+    for (const day of days) {
+        const dhl = (day.carriers || []).find(carrier =>
+            carrier.carrier === 'DHL' &&
+            carrier.totalCost !== null &&
+            Number.isFinite(Number(carrier.totalCost))
+        );
+        if (dhl && day.date) return day.date;
+    }
+
+    throw new Error('ShipBee لم يُرجع عرض DHL صالحًا لهذا العنوان والوزن');
 }
 
 function extractBuildingNumber(addr) {
@@ -266,6 +385,10 @@ async function sendToShipBee(shopifyOrder) {
     }
 
     const addr = shopifyOrder.shipping_address;
+    const currency = shopifyOrder.currency;
+    const weightKg = getOrderWeightKg(shopifyOrder);
+    const lineItems = Array.isArray(shopifyOrder.line_items) ? shopifyOrder.line_items : [];
+    if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
 
     const missing = [];
     if (!addr.address1) missing.push('address1');
@@ -276,10 +399,25 @@ async function sendToShipBee(shopifyOrder) {
         throw new Error(`عنوان الشحن ناقص الحقول: ${missing.join(', ')}`);
     }
 
+    const customsTotalValue = toUsd(
+        shopifyOrder.current_subtotal_price || shopifyOrder.subtotal_price,
+        currency
+    );
+    const customsLineItems = lineItems.map((item, i) => ({
+        number: i + 1,
+        description: (item.title && item.title.substring(0, 50)) || 'Item',
+        price: toUsd(getDiscountedUnitPrice(item), currency),
+        quantity: { value: item.quantity || 1, unitOfMeasurement: 'PCS' },
+        weight: {
+            netValue: getLineItemWeightKg(item),
+            grossValue: getLineItemWeightKg(item)
+        },
+        manufacturerCountry: 'China'
+    }));
+    const quoteDate = await getDhlQuote(addr, weightKg);
     const payload = {
         serviceSubcategory: 'International',
-        paymentMethod: 'CREDIT_DEBIT',
-        siteId: 'express-staging',
+        paymentMethod: 'MONTHLY_BILL',
         senderName: SENDER.name,
         senderPhoneNumber: SENDER.phone,
         senderEmail: SENDER.email,
@@ -287,24 +425,17 @@ async function sendToShipBee(shopifyOrder) {
         fromAddress: SENDER.address,
         shipment: {
             shippingCompany: 'DHL',
-            weight: Math.max(0.1, (parseFloat(shopifyOrder.total_weight) || 100) / 1000),
+            weight: weightKg,
             length: 40,
             width: 30,
             height: 20,
-            itemCount: (shopifyOrder.line_items && shopifyOrder.line_items.length) || 1,
-            totalValue: parseFloat(shopifyOrder.subtotal_price) || 100,
+            itemCount: 1,
+            totalValue: customsTotalValue,
             description: 'Headphones & Earbuds',
-            incoTerm: 'DDU',
-            purpose: 'Sale',
-            plannedShippingDateAndTime: getPlannedShippingDate(),
-            lineItems: (shopifyOrder.line_items || []).map((item, i) => ({
-                number: i + 1,
-                description: (item.title && item.title.substring(0, 50)) || 'Item',
-                price: parseFloat(item.price) || 10,
-                quantity: { value: item.quantity || 1, unitOfMeasurement: 'PCS' },
-                weight: { netValue: 0.3, grossValue: 0.5 },
-                manufacturerCountry: 'China'
-            }))
+            incoterm: 'DDU',
+            purpose: 'commercial',
+            plannedShippingDateAndTime: `${quoteDate}T10:00:00 GMT+03:00`,
+            lineItems: customsLineItems
         },
         stops: [{
             sequence: 1,
@@ -315,7 +446,7 @@ async function sendToShipBee(shopifyOrder) {
                 street: addr.address1.substring(0, 45),
                 buildingNumber: extractBuildingNumber(addr) || 'N/A',
                 landmarks: (addr.company || addr.address1).substring(0, 45),
-                zipCode: addr.zip || '00000'
+                zipCode: addr.zip || undefined
             },
             receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
                 (shopifyOrder.customer && shopifyOrder.customer.first_name) ||
@@ -359,6 +490,10 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         return res.status(401).send('Unauthorized');
     }
 
+    if (!order || typeof order !== 'object' || !order.id) {
+        return res.status(400).send('Invalid Shopify order payload');
+    }
+
     const baseLog = await pushLog({
         type: 'webhook_received',
         orderId: order.id,
@@ -368,19 +503,66 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         city: order.shipping_address && order.shipping_address.city,
         total: order.total_price,
         currency: order.currency,
-        shopifyPayload: order,
         status: 'processing'
     });
 
     try {
-        if (await isOrderAlreadyProcessed(order.id)) {
+        const previousShipBeeOrder = await findExistingShipBeeOrder(order.id);
+        if (previousShipBeeOrder) {
             await pushLog({
                 ...baseLog,
                 id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
                 type: 'webhook_duplicate',
                 status: 'duplicate_skipped'
             });
-            return res.status(200).json({ success: true, message: 'Already processed' });
+            if (previousShipBeeOrder.fulfilled) {
+                return res.status(200).json({ success: true, message: 'Already fulfilled' });
+            }
+
+            const previousData = previousShipBeeOrder.responseLog.shipbeeResponse.data;
+            const previousShipment = previousData.shipment || {};
+            if (!previousShipment.trackingNumber) {
+                return res.status(200).json({ success: true, message: 'ShipBee order already created' });
+            }
+
+            try {
+                const ff = await fulfillShopifyOrder(
+                    order.id,
+                    previousShipment.trackingNumber,
+                    previousShipment.shippingCompany || 'DHL'
+                );
+                await pushLog({
+                    type: 'success',
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    customer: order.email || (order.customer && order.customer.email),
+                    country: order.shipping_address && order.shipping_address.country,
+                    tracking: previousShipment.trackingNumber,
+                    trackingCompany: previousShipment.shippingCompany || 'DHL',
+                    fulfillmentId: ff.fulfillmentId,
+                    durationMs: Date.now() - startedAt,
+                    status: 'success'
+                });
+                return res.status(200).json({
+                    success: true,
+                    tracking: previousShipment.trackingNumber,
+                    fulfillmentId: ff.fulfillmentId
+                });
+            } catch (ffErr) {
+                await pushLog({
+                    type: 'shopify_update_failed',
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    tracking: previousShipment.trackingNumber,
+                    error: ffErr.message,
+                    status: 'shopify_update_failed'
+                });
+                return res.status(207).json({
+                    success: true,
+                    tracking: previousShipment.trackingNumber,
+                    shopifyError: ffErr.message
+                });
+            }
         }
 
         const { payload, response } = await sendToShipBee(order);
@@ -402,18 +584,17 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         const tracking = shipment.trackingNumber;
 
         if (!tracking) {
+            const message = 'ShipBee did not return a tracking number for a MONTHLY_BILL shipment';
             await pushLog({
-                type: 'awaiting_payment',
+                type: 'error',
                 orderId: order.id,
                 orderNumber: order.order_number,
-                paymentUrl: shipment.paymentUrl,
-                status: 'awaiting_payment'
+                shipbeeOrderId: response.data && response.data.id,
+                shipbeeOrderNo: response.data && response.data.orderNo,
+                error: message,
+                status: 'error'
             });
-            return res.status(200).json({
-                success: true,
-                tracking: null,
-                paymentUrl: shipment.paymentUrl
-            });
+            return res.status(502).json({ success: false, message });
         }
 
         try {
@@ -480,9 +661,38 @@ try {
     console.error('لم يتم تحميل dashboard.html:', e.message);
 }
 
-app.get('/dashboard', (req, res) => res.send(DASHBOARD_HTML));
-app.get('/api/logs', async (req, res) => res.json(await getLogs()));
-app.delete('/api/logs', async (req, res) => {
+function safeStringEqual(left, right) {
+    const leftBytes = Buffer.from(left);
+    const rightBytes = Buffer.from(right);
+    return leftBytes.length === rightBytes.length && crypto.timingSafeEqual(leftBytes, rightBytes);
+}
+
+function requireDashboardAuth(req, res, next) {
+    if (!DASHBOARD_USERNAME || !DASHBOARD_PASSWORD) {
+        return res.status(503).send('Dashboard disabled: configure DASHBOARD_USERNAME and DASHBOARD_PASSWORD');
+    }
+
+    const authorization = req.get('authorization') || '';
+    const match = authorization.match(/^Basic\s+([A-Za-z0-9+/=]+)$/i);
+    if (match) {
+        const decoded = Buffer.from(match[1], 'base64').toString('utf8');
+        const separator = decoded.indexOf(':');
+        if (separator >= 0) {
+            const username = decoded.slice(0, separator);
+            const password = decoded.slice(separator + 1);
+            const usernameMatches = safeStringEqual(username, DASHBOARD_USERNAME);
+            const passwordMatches = safeStringEqual(password, DASHBOARD_PASSWORD);
+            if (usernameMatches && passwordMatches) return next();
+        }
+    }
+
+    res.set('WWW-Authenticate', 'Basic realm="ShipBee dashboard"');
+    return res.status(401).send('Authentication required');
+}
+
+app.get('/dashboard', requireDashboardAuth, (req, res) => res.send(DASHBOARD_HTML));
+app.get('/api/logs', requireDashboardAuth, async (req, res) => res.json(await getLogs()));
+app.delete('/api/logs', requireDashboardAuth, async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
 });
@@ -498,7 +708,7 @@ if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`🚀 http://localhost:${PORT}/dashboard`);
         console.log(`📡 POST /webhooks/shopify/order-created`);
-        console.log(`🔐 HMAC: ${WEBHOOK_SECRET ? 'مفعّل ✓' : 'معطّل ⚠'}`);
+        console.log(`🔐 HMAC: ${WEBHOOK_SECRET ? 'مفعّل ✓' : 'غير مضبوط — سيتم رفض الويبهوكات ⚠'}`);
         console.log(`📦 Shopify API: ${SHOPIFY_VERSION}`);
     });
 }

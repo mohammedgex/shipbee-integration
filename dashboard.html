@@ -305,13 +305,15 @@
                 'webhook_rejected': ['b-failed', '🔒 مرفوض']
             };
             const [c, t] = map[status] || ['b-info', status || '—'];
-            return `<span class="badge ${c}">${t}</span>`;
+            return `<span class="badge ${c}">${escapeHtml(t)}</span>`;
         }
         let expanded = new Set();
         async function loadLogs() {
             try {
                 const r = await fetch('/api/logs');
+                if (!r.ok) throw new Error(`تعذر تحميل السجلات (HTTP ${r.status})`);
                 const logs = await r.json();
+                if (!Array.isArray(logs)) throw new Error('استجابة السجلات غير صالحة');
                 const tbody = document.getElementById('tbody');
                 document.getElementById('s-total').textContent = logs.length;
                 document.getElementById('s-success').textContent = logs.filter(l => l.status === 'success').length;
@@ -322,29 +324,38 @@
                     return
                 }
                 tbody.innerHTML = logs.map(l => `
-            <tr class="main-row" onclick="toggle('${l.id}')">
+            <tr class="main-row" data-log-id="${escapeHtml(l.id)}">
                 <td class="time">${fmtTime(l.at)}</td>
-                <td>#${l.orderNumber||l.orderId||'—'}</td>
-                <td>${l.customer||'—'}</td>
-                <td>${l.country||'—'}</td>
-                <td>${l.total?l.total+' '+(l.currency||''):''}</td>
+                <td>#${escapeHtml(l.orderNumber || l.orderId || '—')}</td>
+                <td>${escapeHtml(l.customer || '—')}</td>
+                <td>${escapeHtml(l.country || '—')}</td>
+                <td>${l.total ? `${escapeHtml(l.total)} ${escapeHtml(l.currency || '')}` : ''}</td>
                 <td>${badge(l.status)}</td>
-                <td>${l.tracking||'—'}</td>
+                <td>${escapeHtml(l.tracking || '—')}</td>
             </tr>
-            <tr class="detail ${expanded.has(l.id)?'open':''}" id="row-${l.id}"><td colspan="7">${renderDetails(l)}</td></tr>
+            <tr class="detail ${expanded.has(l.id) ? 'open' : ''}" id="row-${escapeHtml(l.id)}"><td colspan="7">${renderDetails(l)}</td></tr>
         `).join('');
             } catch (e) {
-                console.error(e)
+                console.error(e);
+                document.getElementById('tbody').innerHTML =
+                    `<tr><td colspan="7" class="empty">${escapeHtml(e.message)}</td></tr>`;
             }
         }
 
         function renderDetails(l) {
             let html = '';
             if (l.error) html += `<div class="section-title">❌ الخطأ</div><pre style="color:#f87171">${escapeHtml(l.error)}</pre>`;
-            if (l.paymentUrl) html += `<div class="section-title">💳 رابط الدفع</div><pre><a href="${l.paymentUrl}" target="_blank" style="color:#38bdf8">${l.paymentUrl}</a></pre>`;
-            if (l.shopifyPayload) {
-                const s = JSON.stringify(l.shopifyPayload, null, 2);
-                html += `<div class="section-title">📥 البيانات الخام من شوبيفاي</div><button class="copy-btn" onclick="copyCode(this)">📋 نسخ</button><pre>${escapeHtml(s)}</pre>`
+            if (l.paymentUrl) {
+                let paymentLink = '';
+                try {
+                    const url = new URL(l.paymentUrl);
+                    if (url.protocol === 'https:') {
+                        paymentLink = `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8">${escapeHtml(url.href)}</a>`;
+                    }
+                } catch (e) {
+                    console.error('Invalid payment URL in log', e);
+                }
+                html += `<div class="section-title">💳 رابط الدفع</div><pre>${paymentLink || escapeHtml(l.paymentUrl)}</pre>`;
             }
             if (l.shipbeePayload) {
                 const s = JSON.stringify(l.shipbeePayload, null, 2);
@@ -370,10 +381,16 @@
 
         function toggle(id) {
             const r = document.getElementById('row-' + id);
+            if (!r) return;
             r.classList.toggle('open');
             if (r.classList.contains('open')) expanded.add(id);
             else expanded.delete(id)
         }
+
+        document.getElementById('tbody').addEventListener('click', event => {
+            const row = event.target.closest('tr.main-row');
+            if (row) toggle(row.dataset.logId);
+        });
 
         function copyCode(btn) {
             const pre = btn.nextElementSibling;
@@ -383,10 +400,17 @@
         }
         async function clearLogs() {
             if (!confirm('تأكيد مسح كل السجلات؟')) return;
-            await fetch('/api/logs', {
-                method: 'DELETE'
-            });
-            loadLogs()
+            try {
+                const response = await fetch('/api/logs', {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    throw new Error(`تعذر مسح السجلات (HTTP ${response.status})`);
+                }
+                await loadLogs();
+            } catch (e) {
+                alert(e.message);
+            }
         }
         loadLogs();
         setInterval(loadLogs, 5000);
