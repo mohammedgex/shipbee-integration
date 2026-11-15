@@ -1,276 +1,415 @@
 const express = require('express');
 const axios = require('axios');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-app.use(express.json());
+
+// نحتاج الـ rawBody للتحقق من HMAC
+app.use(express.json({
+    verify: (req, res, buf) => { req.rawBody = buf; }
+}));
 
 // ==========================================
-// 1. الإعدادات والبيانات الحساسة
+// 1. الإعدادات - من Environment Variables فقط
 // ==========================================
-// إعدادات ShipBee
-const SHIPBEE_API_KEY = process.env.SHIPBEE_API_KEY || '6cl916m54wgm116spn12sz32fbhmx1';
+const SHIPBEE_API_KEY = process.env.SHIPBEE_API_KEY;
 const SHIPBEE_BASE_URL = process.env.SHIPBEE_BASE_URL || 'https://api.staging.shipbee.io';
+const SHOPIFY_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
+const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const SHOPIFY_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01';
+const WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 
-// إعدادات شوبيفاي (لازم تضيفهم في Environment Variables)
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || 'mofage-iq9btkui.myshopify.com';
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx';
-const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2026-10';
+// ✅ بيانات Mofage الحقيقية
+const SENDER = {
+    name: 'Mofage',
+    phone: '+97450002690',
+    email: 'info@mofage.net',
+    company: 'Mofage',
+    address: {
+        country: 'Qatar',
+        city: 'Lusail',
+        district: 'Fox Hills North',
+        street: 'St 217',
+        buildingNumber: '28',
+        landmarks: 'Savoy Residences A',
+        zone: 'Fox Hills'
+    }
+};
 
-// دالة مساعدة لتوليد تاريخ الشحن المطلوب (بكرة الساعة 10 صباحاً بتوقيت قطر +3)
-function getPlannedShippingDate() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
-    return `${dateStr}T10:00:00 GMT+03:00`;
+// ==========================================
+// 2. نظام السجلات (KV اختياري + in-memory fallback)
+// ==========================================
+let kv = null;
+try {
+    const vk = require('@vercel/kv');
+    if (vk && vk.kv) {
+        kv = vk.kv;
+        console.log('✅ يستخدم Vercel KV للسجلات الدائمة');
+    }
+} catch (e) {
+    console.log('ℹ️ Vercel KV غير مثبّت — السجلات في الذاكرة فقط (تتصفر مع Cold Start)');
+}
+
+let inMemoryLogs = [];
+const LOG_KEY = 'mofage_logs';
+const MAX_LOGS = 200;
+
+async function pushLog(entry) {
+    const log = {
+        id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        at: new Date().toISOString(),
+        ...entry
+    };
+
+    if (kv) {
+        try {
+            await kv.lpush(LOG_KEY, JSON.stringify(log));
+            await kv.ltrim(LOG_KEY, 0, MAX_LOGS - 1);
+            return log;
+        } catch (e) {
+            console.error('KV push failed, falling back to memory:', e.message);
+        }
+    }
+
+    inMemoryLogs.unshift(log);
+    if (inMemoryLogs.length > MAX_LOGS) inMemoryLogs = inMemoryLogs.slice(0, MAX_LOGS);
+    return log;
+}
+
+async function getLogs() {
+    if (kv) {
+        try {
+            const raw = await kv.lrange(LOG_KEY, 0, -1);
+            return raw.map(r => typeof r === 'string' ? JSON.parse(r) : r);
+        } catch (e) {
+            console.error('KV read failed:', e.message);
+        }
+    }
+    return inMemoryLogs;
+}
+
+async function clearLogs() {
+    if (kv) {
+        try { await kv.del(LOG_KEY); } catch (e) { /* ignore */ }
+    }
+    inMemoryLogs = [];
+}
+
+async function isOrderAlreadyProcessed(orderId) {
+    const all = await getLogs();
+    return all.some(l =>
+        l.orderId === orderId &&
+        (l.status === 'success' || l.status === 'awaiting_payment')
+    );
 }
 
 // ==========================================
-// 2. دالة تحديث شوبيفاي (إنشاء Fulfillment وإضافة Tracking)
+// 3. HMAC Verification
 // ==========================================
-async function fulfillShopifyOrder(shopifyOrderId, trackingNumber, trackingCompany) {
+function verifyShopifyWebhook(req) {
+    if (!WEBHOOK_SECRET) return true;
+    const hmac = req.get('X-Shopify-Hmac-Sha256');
+    if (!hmac || !req.rawBody) return false;
     try {
-        console.log(`[>] جاري تحديث شوبيفاي للأوردر رقم ${shopifyOrderId} برقم التتبع ${trackingNumber}...`);
-
-        // أ) جلب fulfillment_order_id من شوبيفاي
-        const fulfillmentOrdersUrl = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}/fulfillment_orders.json`;
-
-        const foResponse = await axios.get(fulfillmentOrdersUrl, {
-            headers: {
-                'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const fulfillmentOrders = foResponse.data.fulfillment_orders;
-
-        if (!fulfillmentOrders || fulfillmentOrders.length === 0) {
-            throw new Error('لا توجد Fulfillment Orders متاحة لهذا الطلب في شوبيفاي.');
-        }
-
-        const fulfillmentOrderId = fulfillmentOrders[0].id;
-
-        // ب) إنشاء الـ Fulfillment مع رقم التتبع
-        const fulfillmentUrl = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/fulfillments.json`;
-
-        const fulfillmentPayload = {
-            fulfillment: {
-                line_items_by_fulfillment_order: [{
-                    fulfillment_order_id: fulfillmentOrderId
-                }],
-                tracking_info: {
-                    number: trackingNumber,
-                    company: trackingCompany // زي "DHL" أو "Aramex"
-                },
-                notify_customer: true // عشان شوبيفاي يبعت إيميل للعميل برقم التتبع
-            }
-        };
-
-        const fulfillmentResponse = await axios.post(fulfillmentUrl, fulfillmentPayload, {
-            headers: {
-                'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const fulfillmentData = fulfillmentResponse.data.fulfillment;
-
-        console.log(`[✓] تم تحديث شوبيفاي بنجاح! Fulfillment ID: ${fulfillmentData.id}`);
-        console.log(`[✓] حالة الشحن في شوبيفاي: ${fulfillmentData.status}`);
-        if (fulfillmentData.tracking_url) {
-            console.log(`[✓] رابط التتبع في شوبيفاي: ${fulfillmentData.tracking_url}`);
-        }
-
-        return {
-            success: true,
-            fulfillmentId: fulfillmentData.id,
-            status: fulfillmentData.status
-        };
-
-    } catch (error) {
-        const errorDetails = error.response ? error.response.data : error.message;
-        console.error('[-] فشل تحديث شوبيفاي:', JSON.stringify(errorDetails, null, 2));
-        throw new Error(`فشل تحديث شوبيفاي: ${errorDetails.errors ? JSON.stringify(errorDetails.errors) : error.message}`);
+        const digest = crypto
+            .createHmac('sha256', WEBHOOK_SECRET)
+            .update(req.rawBody)
+            .digest('base64');
+        return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(digest));
+    } catch {
+        return false;
     }
 }
 
 // ==========================================
-// 3. استقبال الـ Webhook من شوبيفاي (orders/create)
+// 4. مساعدات
 // ==========================================
-app.post('/webhooks/shopify/order-created', async(req, res) => {
-    try {
-        const shopifyOrder = req.body;
+function getPlannedShippingDate() {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    return `${t.toISOString().split('T')[0]}T10:00:00 GMT+03:00`;
+}
 
-        console.log(`\n=========================================`);
-        console.log(`[+] استلام طلب جديد من شوبيفاي #${shopifyOrder.order_number || shopifyOrder.id}`);
+function extractBuildingNumber(addr) {
+    const text = `${addr.address1 || ''} ${addr.address2 || ''} ${addr.company || ''}`;
+    const m = text.match(/\b(?:building|bldg|bld|no\.?|#)\s*(\d+[a-z]?)\b/i);
+    return m ? m[1] : null;
+}
 
-        if (!shopifyOrder.shipping_address) {
-            console.log('[-] الطلب لا يحتوي على عنوان شحن، تم التغاضي عنه.');
-            return res.status(200).send('No shipping address provided');
+// ==========================================
+// 5. تحديث شوبيفاي (Fulfillment)
+// ==========================================
+async function fulfillShopifyOrder(orderId, trackingNumber, trackingCompany) {
+    const base = `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}`;
+    const headers = {
+        'X-Shopify-Access-Token': SHOPIFY_TOKEN,
+        'Content-Type': 'application/json'
+    };
+
+    const foRes = await axios.get(
+        `${base}/orders/${orderId}/fulfillment_orders.json`, { headers }
+    );
+
+    const orders = foRes.data.fulfillment_orders || [];
+    const open = orders.find(o => o.status === 'open' || o.status === 'in_progress');
+
+    if (!open) {
+        throw new Error('لا يوجد Fulfillment Order مفتوح (ممكن يكون متشحن بالفعل)');
+    }
+
+    const ffRes = await axios.post(`${base}/fulfillments.json`, {
+        fulfillment: {
+            line_items_by_fulfillment_order: [{ fulfillment_order_id: open.id }],
+            tracking_info: { number: trackingNumber, company: trackingCompany },
+            notify_customer: true
         }
+    }, { headers });
 
-        const shippingAddr = shopifyOrder.shipping_address;
+    return {
+        fulfillmentId: ffRes.data.fulfillment.id,
+        status: ffRes.data.fulfillment.status
+    };
+}
 
-        // ✅ التعديل هنا: قص العناوين لـ 45 حرف كحد أقصى لشركة DHL وضمان عدم وجود بيانات وهمية
-        const street = (shippingAddr.address1 || "Street 1").substring(0, 45);
-        const district = (shippingAddr.address2 || "District 1").substring(0, 45);
-        // DHL بتعتبر landmarks هي Address Line 1، فلو مفيش شركة هنستخدم العنوان الأول
-        const landmarks = (shippingAddr.company || shippingAddr.address1 || "Main Street").substring(0, 45);
-        const zipCode = shippingAddr.zip || "00000";
+// ==========================================
+// 6. إرسال ShipBee
+// ==========================================
+async function sendToShipBee(shopifyOrder) {
+    if (!shopifyOrder.shipping_address) {
+        throw new Error('لا يوجد عنوان شحن');
+    }
 
-        // ==========================================
-        // 4. تجهيز الـ Payload لـ ShipBee
-        // ==========================================
-        const shipbeePayload = {
-            serviceSubcategory: "International",
-            // MONTHLY_BILL عشان نطلع الـ Tracking فوراً
-            paymentMethod: "MONTHLY_BILL",
-            siteId: "express-staging",
+    const addr = shopifyOrder.shipping_address;
 
-            senderName: "Doha Threads WLL",
-            senderPhoneNumber: "+97455512345",
-            senderEmail: "info@my-shopify-store.com",
-            senderCompanyName: "My Shopify Store",
-            fromAddress: {
-                country: "Qatar",
-                city: "Doha",
-                district: "West Bay",
-                street: "Corniche St",
-                buildingNumber: "12",
-                zone: "Zone 61",
-                landmarks: "Near City Center Mall"
+    const missing = [];
+    if (!addr.address1) missing.push('address1');
+    if (!addr.city) missing.push('city');
+    if (!addr.country) missing.push('country');
+    if (!addr.phone && !shopifyOrder.phone) missing.push('phone');
+    if (missing.length) {
+        throw new Error(`عنوان الشحن ناقص الحقول: ${missing.join(', ')}`);
+    }
+
+    const payload = {
+        serviceSubcategory: 'International',
+        paymentMethod: 'MONTHLY_BILL',
+        siteId: 'express-staging',
+        senderName: SENDER.name,
+        senderPhoneNumber: SENDER.phone,
+        senderEmail: SENDER.email,
+        senderCompanyName: SENDER.company,
+        fromAddress: SENDER.address,
+        shipment: {
+            shippingCompany: 'DHL',
+            weight: Math.max(0.1, (parseFloat(shopifyOrder.total_weight) || 100) / 1000),
+            length: 40,
+            width: 30,
+            height: 20,
+            itemCount: shopifyOrder.line_items ? .length || 1,
+            totalValue: parseFloat(shopifyOrder.subtotal_price) || 100,
+            description: 'Headphones & Earbuds',
+            incoTerm: 'DDU',
+            purpose: 'Sale',
+            plannedShippingDateAndTime: getPlannedShippingDate(),
+            lineItems: (shopifyOrder.line_items || []).map((item, i) => ({
+                number: i + 1,
+                description: item.title ? .substring(0, 50) || 'Item',
+                price: parseFloat(item.price) || 10,
+                quantity: { value: item.quantity || 1, unitOfMeasurement: 'PCS' },
+                weight: { netValue: 0.3, grossValue: 0.5 },
+                manufacturerCountry: 'China'
+            }))
+        },
+        stops: [{
+            sequence: 1,
+            toAddress: {
+                country: addr.country,
+                city: addr.city,
+                district: (addr.address2 || addr.address1).substring(0, 45),
+                street: addr.address1.substring(0, 45),
+                buildingNumber: extractBuildingNumber(addr) || 'N/A',
+                landmarks: (addr.company || addr.address1).substring(0, 45),
+                zipCode: addr.zip || '00000'
             },
+            receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
+                shopifyOrder.customer ? .first_name ||
+                'Guest',
+            receiverPhoneNumber: addr.phone || shopifyOrder.phone,
+            receiverEmail: shopifyOrder.email || shopifyOrder.customer ? .email
+        }]
+    };
 
-            shipment: {
-                shippingCompany: "DHL",
-                weight: Math.max(0.1, parseFloat(shopifyOrder.total_weight || 1000) / 1000),
-                length: 40,
-                width: 30,
-                height: 20,
-                itemCount: shopifyOrder.line_items ? shopifyOrder.line_items.length : 1,
-                totalValue: parseFloat(shopifyOrder.total_price || 100),
-                description: "Headphones & Earbuds",
-                incoTerm: "DDU",
-                purpose: "Sale",
-                plannedShippingDateAndTime: getPlannedShippingDate(),
-
-                lineItems: shopifyOrder.line_items ? shopifyOrder.line_items.map((item, index) => ({
-                    number: index + 1,
-                    description: item.title ? item.title.substring(0, 50) : "Item",
-                    price: parseFloat(item.price) || 10,
-                    quantity: { value: item.quantity || 1, unitOfMeasurement: "PCS" },
-                    weight: { netValue: 0.3, grossValue: 0.5 },
-                    manufacturerCountry: "China"
-                })) : []
-            },
-
-            stops: [{
-                sequence: 1,
-                toAddress: {
-                    country: shippingAddr.country || "United Arab Emirates",
-                    city: shippingAddr.city || "Dubai",
-                    district: district,
-                    street: street,
-                    buildingNumber: "10",
-                    landmarks: landmarks,
-                    zipCode: zipCode
-                },
-                receiverName: `${shippingAddr.first_name || 'Guest'} ${shippingAddr.last_name || ''}`.trim(),
-                receiverPhoneNumber: shippingAddr.phone || "+971501234567",
-                receiverEmail: shopifyOrder.email || "customer@example.com"
-            }]
-        };
-
-        // ==========================================
-        // 5. إرسال الطلب لـ ShipBee
-        // ==========================================
-        console.log('[>] جاري إرسال الطلب إلى ShipBee...');
-        const shipbeeResponse = await axios.post(`${SHIPBEE_BASE_URL}/api/orders`, shipbeePayload, {
+    const res = await axios.post(
+        `${SHIPBEE_BASE_URL}/api/orders`,
+        payload, {
             headers: {
                 'x-api-key': SHIPBEE_API_KEY,
                 'Content-Type': 'application/json'
             }
+        }
+    );
+
+    return { payload, response: res.data };
+}
+
+// ==========================================
+// 7. الـ Webhook الرئيسي
+// ==========================================
+app.post('/webhooks/shopify/order-created', async(req, res) => {
+    const startedAt = Date.now();
+    const order = req.body;
+
+    if (!verifyShopifyWebhook(req)) {
+        await pushLog({
+            type: 'webhook_rejected',
+            reason: 'HMAC invalid',
+            orderId: order ? .id
         });
+        return res.status(401).send('Unauthorized');
+    }
 
-        const resData = shipbeeResponse.data;
+    const baseLog = await pushLog({
+        type: 'webhook_received',
+        orderId: order.id,
+        orderNumber: order.order_number,
+        customer: order.email || order.customer ? .email,
+        country: order.shipping_address ? .country,
+        city: order.shipping_address ? .city,
+        total: order.total_price,
+        currency: order.currency,
+        shopifyPayload: order,
+        status: 'processing'
+    });
 
-        if (!resData.success) {
-            console.error('[-] ShipBee Error:', resData.message);
-            return res.status(400).json(resData);
+    try {
+        if (await isOrderAlreadyProcessed(order.id)) {
+            await pushLog({
+                ...baseLog,
+                id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                type: 'webhook_duplicate',
+                status: 'duplicate_skipped'
+            });
+            return res.status(200).json({ success: true, message: 'Already processed' });
         }
 
-        const shipbeeOrder = resData.data;
-        const trackingNumber = shipbeeOrder.shipment ? shipbeeOrder.shipment.trackingNumber : null;
-        const trackingCompany = shipbeeOrder.shipment ? shipbeeOrder.shipment.shippingCompany : 'DHL';
-        const paymentUrl = shipbeeOrder.shipment ? shipbeeOrder.shipment.paymentUrl : null;
+        const { payload, response } = await sendToShipBee(order);
 
-        console.log(`[✓] تم إنشاء الشحنة في ShipBee! رقم الطلب: ${shipbeeOrder.orderNo}`);
+        await pushLog({
+            type: 'shipbee_response',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            shipbeePayload: payload,
+            shipbeeResponse: response,
+            status: response.success ? 'shipbee_ok' : 'shipbee_failed'
+        });
 
-        if (!trackingNumber) {
-            console.log('[-] تنبيه: لا يوجد Tracking Number بعد. الشحنة محتاجة دفع أولاً.');
-            if (paymentUrl) {
-                console.log(`[>] رابط الدفع: ${paymentUrl}`);
-            }
+        if (!response.success) {
+            return res.status(400).json(response);
+        }
+
+        const shipment = response.data ? .shipment || {};
+        const tracking = shipment.trackingNumber;
+
+        if (!tracking) {
+            await pushLog({
+                type: 'awaiting_payment',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                paymentUrl: shipment.paymentUrl,
+                status: 'awaiting_payment'
+            });
             return res.status(200).json({
                 success: true,
-                shipbeeOrderNo: shipbeeOrder.orderNo,
-                trackingNumber: null,
-                paymentUrl: paymentUrl,
-                shopifyUpdated: false,
-                message: 'تم إنشاء الشحنة، لكنها في انتظار الدفع للحصول على رقم التتبع.'
+                tracking: null,
+                paymentUrl: shipment.paymentUrl
             });
         }
 
-        console.log(`[✓] رقم التتبع: ${trackingNumber}`);
-        console.log(`[✓] شركة الشحن: ${trackingCompany}`);
-
-        // ==========================================
-        // 6. تحديث شوبيفاي برقم التتبع (Fulfillment)
-        // ==========================================
-        let shopifyUpdateResult = null;
         try {
-            shopifyUpdateResult = await fulfillShopifyOrder(shopifyOrder.id, trackingNumber, trackingCompany);
-        } catch (fulfillmentError) {
-            console.error('[-] فشل تحديث شوبيفاي:', fulfillmentError.message);
+            const ff = await fulfillShopifyOrder(
+                order.id,
+                tracking,
+                shipment.shippingCompany || 'DHL'
+            );
+
+            await pushLog({
+                type: 'success',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                customer: order.email || order.customer ? .email,
+                country: order.shipping_address ? .country,
+                total: order.total_price,
+                currency: order.currency,
+                tracking,
+                trackingCompany: shipment.shippingCompany,
+                fulfillmentId: ff.fulfillmentId,
+                durationMs: Date.now() - startedAt,
+                status: 'success'
+            });
+
+            return res.status(200).json({
+                success: true,
+                tracking,
+                fulfillmentId: ff.fulfillmentId
+            });
+        } catch (ffErr) {
+            await pushLog({
+                type: 'shopify_update_failed',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                tracking,
+                error: ffErr.message,
+                status: 'shopify_update_failed'
+            });
             return res.status(207).json({
                 success: true,
-                shipbeeOrderNo: shipbeeOrder.orderNo,
-                trackingNumber: trackingNumber,
-                shopifyUpdated: false,
-                shopifyError: fulfillmentError.message,
-                message: 'تم إنشاء الشحنة في ShipBee، لكن فشل تحديث شوبيفاي.'
+                tracking,
+                shopifyError: ffErr.message
             });
         }
-
-        // ==========================================
-        // 7. الرد النهائي (نجاح كامل)
-        // ==========================================
-        return res.status(200).json({
-            success: true,
-            shipbeeOrderNo: shipbeeOrder.orderNo,
-            trackingNumber: trackingNumber,
-            trackingCompany: trackingCompany,
-            shopifyFulfillmentId: shopifyUpdateResult.fulfillmentId,
-            shopifyStatus: shopifyUpdateResult.status,
-            shopifyUpdated: true,
-            message: 'تم إنشاء الشحنة في ShipBee وتحديث شوبيفاي بنجاح!'
+    } catch (err) {
+        await pushLog({
+            type: 'error',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            error: err.message,
+            status: 'error'
         });
-
-    } catch (error) {
-        console.error('[-] خطأ عام:', error.response ? error.response.data : error.message);
-        return res.status(500).json({
-            success: false,
-            message: error.message || 'Internal Server Error'
-        });
+        return res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// Health Check
-app.get('/', (req, res) => {
-    res.send('ShipBee - Shopify Integration Middleware is Running!');
-});
+// ==========================================
+// 8. لوحة المراقبة
+// ==========================================
+let DASHBOARD_HTML = '<h1>dashboard.html غير موجود</h1>';
+try {
+    DASHBOARD_HTML = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8');
+} catch (e) {
+    console.error('لم يتم تحميل dashboard.html:', e.message);
+}
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`🔗 جاهز لاستقبال الطلبات على /webhooks/shopify/order-created`);
+app.get('/dashboard', (req, res) => res.send(DASHBOARD_HTML));
+app.get('/api/logs', async(req, res) => res.json(await getLogs()));
+app.delete('/api/logs', async(req, res) => {
+    await clearLogs();
+    res.json({ ok: true });
 });
+app.get('/', (req, res) => res.redirect('/dashboard'));
+
+// ==========================================
+// 9. تشغيل محلي فقط (Vercel يتجاهله)
+// ==========================================
+module.exports = app;
+
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 http://localhost:${PORT}/dashboard`);
+        console.log(`📡 POST /webhooks/shopify/order-created`);
+        console.log(`🔐 HMAC: ${WEBHOOK_SECRET ? 'مفعّل ✓' : 'معطّل ⚠'}`);
+        console.log(`📦 Shopify API: ${SHOPIFY_VERSION}`);
+    });
+}

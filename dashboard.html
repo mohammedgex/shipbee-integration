@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mofage — ShipBee Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+        
+        body {
+            font-family: -apple-system, 'Segoe UI', Tahoma, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 24px
+        }
+        
+        .container {
+            max-width: 1500px;
+            margin: 0 auto
+        }
+        
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 8px
+        }
+        
+        .sub {
+            color: #64748b;
+            margin-bottom: 24px;
+            font-size: 14px
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px
+        }
+        
+        .stat {
+            background: #1e293b;
+            padding: 18px;
+            border-radius: 10px;
+            border-right: 4px solid #38bdf8
+        }
+        
+        .stat.success {
+            border-color: #22c55e
+        }
+        
+        .stat.failed {
+            border-color: #ef4444
+        }
+        
+        .stat.pending {
+            border-color: #f59e0b
+        }
+        
+        .stat-val {
+            font-size: 2em;
+            font-weight: 700;
+            color: #f1f5f9
+        }
+        
+        .stat.success .stat-val {
+            color: #22c55e
+        }
+        
+        .stat.failed .stat-val {
+            color: #ef4444
+        }
+        
+        .stat.pending .stat-val {
+            color: #f59e0b
+        }
+        
+        .stat-lbl {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 4px
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap
+        }
+        
+        .btn {
+            background: #334155;
+            color: #e2e8f0;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px
+        }
+        
+        .btn:hover {
+            background: #475569
+        }
+        
+        .btn.danger {
+            background: #7f1d1d
+        }
+        
+        .btn.danger:hover {
+            background: #991b1b
+        }
+        
+        table {
+            width: 100%;
+            background: #1e293b;
+            border-radius: 10px;
+            overflow: hidden;
+            border-collapse: collapse
+        }
+        
+        th {
+            background: #334155;
+            padding: 12px;
+            text-align: right;
+            font-size: 13px;
+            color: #cbd5e1
+        }
+        
+        td {
+            padding: 12px;
+            border-top: 1px solid #334155;
+            font-size: 13px
+        }
+        
+        tr.main-row:hover {
+            background: #334155;
+            cursor: pointer
+        }
+        
+        .badge {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block
+        }
+        
+        .b-success {
+            background: #14532d;
+            color: #22c55e
+        }
+        
+        .b-failed {
+            background: #7f1d1d;
+            color: #ef4444
+        }
+        
+        .b-pending {
+            background: #78350f;
+            color: #f59e0b
+        }
+        
+        .b-info {
+            background: #1e3a8a;
+            color: #93c5fd
+        }
+        
+        .detail {
+            display: none;
+            background: #0f172a
+        }
+        
+        .detail.open {
+            display: table-row
+        }
+        
+        .detail td {
+            padding: 16px
+        }
+        
+        .section-title {
+            color: #38bdf8;
+            font-size: 12px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase
+        }
+        
+        pre {
+            background: #020617;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 350px;
+            overflow: auto;
+            margin-bottom: 14px;
+            border: 1px solid #1e293b
+        }
+        
+        .copy-btn {
+            background: #1e40af;
+            color: #fff;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-bottom: 6px
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #64748b
+        }
+        
+        .time {
+            color: #64748b;
+            font-size: 12px
+        }
+        
+        .refresh-tag {
+            color: #22c55e;
+            font-size: 12px;
+            margin-right: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎯 Mofage × ShipBee — لوحة المراقبة</h1>
+        <p class="sub">مراقبة لحظية لكل طلب من شوبيفاي إلى ShipBee <span class="refresh-tag">🔄 يتحدث كل 5 ثواني</span></p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-val" id="s-total">0</div>
+                <div class="stat-lbl">إجمالي</div>
+            </div>
+            <div class="stat success">
+                <div class="stat-val" id="s-success">0</div>
+                <div class="stat-lbl">نجح</div>
+            </div>
+            <div class="stat failed">
+                <div class="stat-val" id="s-failed">0</div>
+                <div class="stat-lbl">فشل</div>
+            </div>
+            <div class="stat pending">
+                <div class="stat-val" id="s-pending">0</div>
+                <div class="stat-lbl">قيد المعالجة</div>
+            </div>
+        </div>
+        <div class="toolbar">
+            <button class="btn" onclick="loadLogs()">🔄 تحديث</button>
+            <button class="btn danger" onclick="clearLogs()">🗑️ مسح السجلات</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>الطلب</th>
+                    <th>العميل</th>
+                    <th>الدولة</th>
+                    <th>المبلغ</th>
+                    <th>الحالة</th>
+                    <th>Tracking</th>
+                </tr>
+            </thead>
+            <tbody id="tbody">
+                <tr>
+                    <td colspan="7" class="empty">جاري التحميل...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function fmtTime(iso) {
+            const d = new Date(iso);
+            return d.toLocaleString('ar-EG', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        }
+
+        function badge(status) {
+            const map = {
+                'success': ['b-success', '✅ نجح'],
+                'error': ['b-failed', '❌ خطأ'],
+                'shipbee_failed': ['b-failed', '❌ ShipBee'],
+                'shopify_update_failed': ['b-pending', '⚠️ شوبيفاي'],
+                'awaiting_payment': ['b-pending', '💳 دفع'],
+                'processing': ['b-info', '⏳ معالجة'],
+                'webhook_received': ['b-info', '📥 مستلم'],
+                'webhook_duplicate': ['b-info', '🔁 مكرر'],
+                'duplicate_skipped': ['b-info', '🔁 مكرر'],
+                'shipbee_ok': ['b-info', '📨 ShipBee'],
+                'webhook_rejected': ['b-failed', '🔒 مرفوض']
+            };
+            const [c, t] = map[status] || ['b-info', status || '—'];
+            return `<span class="badge ${c}">${t}</span>`;
+        }
+        let expanded = new Set();
+        async function loadLogs() {
+            try {
+                const r = await fetch('/api/logs');
+                const logs = await r.json();
+                const tbody = document.getElementById('tbody');
+                document.getElementById('s-total').textContent = logs.length;
+                document.getElementById('s-success').textContent = logs.filter(l => l.status === 'success').length;
+                document.getElementById('s-failed').textContent = logs.filter(l => l.status === 'error' || l.status === 'shipbee_failed' || l.status === 'webhook_rejected').length;
+                document.getElementById('s-pending').textContent = logs.filter(l => ['processing', 'webhook_received', 'awaiting_payment', 'shopify_update_failed'].includes(l.status)).length;
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty">لا توجد طلبات بعد.</td></tr>';
+                    return
+                }
+                tbody.innerHTML = logs.map(l => `
+            <tr class="main-row" onclick="toggle('${l.id}')">
+                <td class="time">${fmtTime(l.at)}</td>
+                <td>#${l.orderNumber||l.orderId||'—'}</td>
+                <td>${l.customer||'—'}</td>
+                <td>${l.country||'—'}</td>
+                <td>${l.total?l.total+' '+(l.currency||''):''}</td>
+                <td>${badge(l.status)}</td>
+                <td>${l.tracking||'—'}</td>
+            </tr>
+            <tr class="detail ${expanded.has(l.id)?'open':''}" id="row-${l.id}"><td colspan="7">${renderDetails(l)}</td></tr>
+        `).join('');
+            } catch (e) {
+                console.error(e)
+            }
+        }
+
+        function renderDetails(l) {
+            let html = '';
+            if (l.error) html += `<div class="section-title">❌ الخطأ</div><pre style="color:#f87171">${escapeHtml(l.error)}</pre>`;
+            if (l.paymentUrl) html += `<div class="section-title">💳 رابط الدفع</div><pre><a href="${l.paymentUrl}" target="_blank" style="color:#38bdf8">${l.paymentUrl}</a></pre>`;
+            if (l.shopifyPayload) {
+                const s = JSON.stringify(l.shopifyPayload, null, 2);
+                html += `<div class="section-title">📥 البيانات الخام من شوبيفاي</div><button class="copy-btn" onclick="copyCode(this)">📋 نسخ</button><pre>${escapeHtml(s)}</pre>`
+            }
+            if (l.shipbeePayload) {
+                const s = JSON.stringify(l.shipbeePayload, null, 2);
+                html += `<div class="section-title">📤 المُرسل إلى ShipBee</div><button class="copy-btn" onclick="copyCode(this)">📋 نسخ</button><pre>${escapeHtml(s)}</pre>`
+            }
+            if (l.shipbeeResponse) {
+                const s = JSON.stringify(l.shipbeeResponse, null, 2);
+                html += `<div class="section-title">📨 رد ShipBee</div><pre>${escapeHtml(s)}</pre>`
+            }
+            if (l.durationMs) html += `<div class="section-title">⏱️ المدة</div><pre>${l.durationMs} ms</pre>`;
+            return html || '<div style="color:#64748b">لا توجد تفاصيل إضافية</div>';
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]))
+        }
+
+        function toggle(id) {
+            const r = document.getElementById('row-' + id);
+            r.classList.toggle('open');
+            if (r.classList.contains('open')) expanded.add(id);
+            else expanded.delete(id)
+        }
+
+        function copyCode(btn) {
+            const pre = btn.nextElementSibling;
+            navigator.clipboard.writeText(pre.textContent);
+            btn.textContent = '✅ تم';
+            setTimeout(() => btn.textContent = '📋 نسخ', 1500)
+        }
+        async function clearLogs() {
+            if (!confirm('تأكيد مسح كل السجلات؟')) return;
+            await fetch('/api/logs', {
+                method: 'DELETE'
+            });
+            loadLogs()
+        }
+        loadLogs();
+        setInterval(loadLogs, 5000);
+    </script>
+</body>
+
+</html>
