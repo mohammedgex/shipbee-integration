@@ -390,6 +390,201 @@
             padding: 9px
         }
 
+        :root {
+            color-scheme: dark;
+            --page: #17191b;
+            --surface: #202326;
+            --surface-raised: #282c30;
+            --surface-hover: #30353a;
+            --border: #3a3f44;
+            --text: #e4e6e8;
+            --muted: #a1a6ab;
+            --accent: #aab4be;
+            --success: #a6b8aa;
+            --danger: #c49a9a;
+            --pending: #c2b18e
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-shadow: none !important;
+            background-image: none !important
+        }
+
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            background: var(--page);
+            color: var(--text);
+            line-height: 1.6
+        }
+
+        h1,
+        .panel h2,
+        .section-title,
+        .order-card strong,
+        #log-details h3 {
+            color: var(--accent)
+        }
+
+        .sub,
+        .muted,
+        .stat-lbl,
+        .time,
+        .empty {
+            color: var(--muted)
+        }
+
+        .sidebar,
+        .panel,
+        .topbar,
+        .stat,
+        .order-card,
+        table {
+            background: var(--surface);
+            border-color: var(--border);
+            border-radius: 8px
+        }
+
+        .stat {
+            border-right-width: 3px;
+            border-right-color: var(--accent)
+        }
+
+        .stat.success,
+        .stat.failed,
+        .stat.pending {
+            border-color: var(--border)
+        }
+
+        .stat.success {
+            border-right-color: var(--success)
+        }
+
+        .stat.failed {
+            border-right-color: var(--danger)
+        }
+
+        .stat.pending {
+            border-right-color: var(--pending)
+        }
+
+        .stat-val,
+        .stat.success .stat-val,
+        .stat.failed .stat-val,
+        .stat.pending .stat-val {
+            color: var(--text)
+        }
+
+        .btn {
+            background: var(--surface-raised);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            transition: background-color 120ms ease
+        }
+
+        .btn:hover,
+        tr.main-row:hover {
+            background: var(--surface-hover)
+        }
+
+        .btn.danger {
+            background: #38292a;
+            color: #dec1c1;
+            border-color: #594143
+        }
+
+        .btn.danger:hover {
+            background: #453234
+        }
+
+        .btn:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 2px solid #87939e;
+            outline-offset: 2px
+        }
+
+        .nav-btn.active {
+            background: #343a40;
+            color: #f0f1f2;
+            border-color: #4a5158
+        }
+
+        th {
+            background: var(--surface-raised);
+            color: #d3d6d9
+        }
+
+        td {
+            border-color: var(--border)
+        }
+
+        .b-success {
+            background: #29332c;
+            color: #b7c8bb
+        }
+
+        .b-failed {
+            background: #392b2c;
+            color: #d2aaaa
+        }
+
+        .b-pending {
+            background: #373329;
+            color: #d0c09d
+        }
+
+        .b-info {
+            background: #2b3035;
+            color: #bdc5cc
+        }
+
+        pre {
+            background: #191b1d;
+            color: #d4d7da;
+            border-color: var(--border);
+            border-radius: 6px
+        }
+
+        .copy-btn {
+            background: #394047;
+            color: var(--text)
+        }
+
+        input,
+        select {
+            color: var(--text);
+            background: #191b1d;
+            border-color: #454b51;
+            border-radius: 6px;
+            font: inherit
+        }
+
+        label {
+            color: #d0d3d6
+        }
+
+        .warning {
+            color: #d0c09d;
+            border-color: #867852;
+            background: #302d25
+        }
+
+        .order-card {
+            background: #1b1e20
+        }
+
+        .order-note {
+            color: #b8ad96
+        }
+
+        .detail {
+            background: var(--page)
+        }
+
         @media (max-width: 760px) {
             body {
                 padding: 12px
@@ -711,7 +906,7 @@
 
             document.getElementById('log-details').innerHTML = `
                 <div class="toolbar" style="justify-content:space-between;align-items:center">
-                    <h3 style="color:#7dd3fc">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
+                    <h3 class="order-details-title">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
                     <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر SMSA</button>
                 </div>
                 <div class="order-summary">
@@ -728,7 +923,7 @@
                 </div>
                 <p class="order-note">سعر SMSA تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
                 ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
-                <h3 style="color:#7dd3fc;margin-top:18px">المنتجات</h3>
+                <h3 class="order-details-title" style="margin-top:18px">المنتجات</h3>
                 <div class="table-wrap">
                     <table class="order-items">
                         <thead><tr><th>المنتج</th><th>SKU</th><th>الكمية</th><th>سعر الوحدة</th><th>إجمالي المنتج</th></tr></thead>
