@@ -682,7 +682,10 @@ function requireDashboardAuth(req, res, next) {
             const password = decoded.slice(separator + 1);
             const usernameMatches = safeStringEqual(username, DASHBOARD_USERNAME);
             const passwordMatches = safeStringEqual(password, DASHBOARD_PASSWORD);
-            if (usernameMatches && passwordMatches) return next();
+            if (usernameMatches && passwordMatches) {
+                res.set('Cache-Control', 'no-store');
+                return next();
+            }
         }
     }
 
@@ -690,11 +693,258 @@ function requireDashboardAuth(req, res, next) {
     return res.status(401).send('Authentication required');
 }
 
+async function requestShipBee(method, endpoint, params, data) {
+    if (!SHIPBEE_API_KEY) {
+        const error = new Error('SHIPBEE_API_KEY غير مضبوط');
+        error.status = 503;
+        throw error;
+    }
+
+    try {
+        const response = await axios({
+            method,
+            url: endpoint.startsWith('/api/') ?
+                `${SHIPBEE_BASE_URL}${endpoint}` :
+                `${SHIPBEE_BASE_URL}/api/v1${endpoint}`,
+            headers: {
+                'x-api-key': SHIPBEE_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            params,
+            data,
+            timeout: 20000
+        });
+        return response.data;
+    } catch (error) {
+        if (error.response) {
+            error.status = error.response.status;
+            error.responseData = error.response.data;
+        } else {
+            error.status = 502;
+        }
+        throw error;
+    }
+}
+
+async function handleShipBeeDashboardRequest(res, request) {
+    try {
+        return res.json(await request());
+    } catch (error) {
+        console.error('ShipBee dashboard request failed:', error.message);
+        return res.status(error.status || 502).json(
+            error.responseData || { success: false, message: error.message }
+        );
+    }
+}
+
+function isIsoDate(value) {
+    return typeof value === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+        !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+}
+
+app.get('/api/shipbee/report', requireDashboardAuth, (req, res) => {
+    const { startDate, endDate } = req.query;
+    if (!isIsoDate(startDate) || !isIsoDate(endDate) || startDate > endDate) {
+        return res.status(400).json({ success: false, message: 'startDate و endDate مطلوبان بصيغة YYYY-MM-DD' });
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('GET', '/orders/report', { startDate, endDate })
+    );
+});
+
+app.get('/api/shipbee/status', requireDashboardAuth, (req, res) => {
+    const { orderNo, orderId } = req.query;
+    if (!orderNo && !orderId) {
+        return res.status(400).json({ success: false, message: 'أدخل orderNo أو orderId' });
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('GET', '/orders/view-order-status', { orderNo, orderId })
+    );
+});
+
+app.get('/api/shipbee/tracking', requireDashboardAuth, (req, res) => {
+    const { orderNo, orderId, trackingNumber, awb } = req.query;
+    if (!orderNo && !orderId && !trackingNumber && !awb) {
+        return res.status(400).json({
+            success: false,
+            message: 'أدخل رقم طلب ShipBee أو رقم التتبع أو AWB'
+        });
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('GET', '/orders/track-shipment', {
+            orderNo,
+            orderId,
+            trackingNumber,
+            awb,
+            refresh: req.query.refresh === 'true'
+        })
+    );
+});
+
+app.get('/api/shipbee/addresses', requireDashboardAuth, (req, res) =>
+    handleShipBeeDashboardRequest(res, () => requestShipBee('GET', '/addresses'))
+);
+
+app.get('/api/shipbee/webhooks', requireDashboardAuth, (req, res) =>
+    handleShipBeeDashboardRequest(res, () => requestShipBee('GET', '/webhooks'))
+);
+
+app.post('/api/shipbee/webhooks', requireDashboardAuth, (req, res) => {
+    const { url, type } = req.body || {};
+    let callbackUrl;
+    try {
+        callbackUrl = new URL(url);
+    } catch {
+        return res.status(400).json({ success: false, message: 'عنوان Webhook غير صالح' });
+    }
+    if (callbackUrl.protocol !== 'https:' || callbackUrl.username || callbackUrl.password) {
+        return res.status(400).json({ success: false, message: 'Webhook يجب أن يستخدم HTTPS' });
+    }
+    if (type !== 'ORDER_STATUS_UPDATE') {
+        return res.status(400).json({ success: false, message: 'نوع Webhook غير مدعوم' });
+    }
+    if (req.body.confirm !== `REGISTER ${type}`) {
+        return res.status(400).json({ success: false, message: `أكد العملية بكتابة REGISTER ${type}` });
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('POST', '/webhooks/register', undefined, { url: callbackUrl.href, type })
+    );
+});
+
+app.delete('/api/shipbee/webhooks', requireDashboardAuth, (req, res) => {
+    const { type, url, confirm } = req.body || {};
+    if (type !== 'ORDER_STATUS_UPDATE') {
+        return res.status(400).json({ success: false, message: 'نوع Webhook غير مدعوم' });
+    }
+    if (url !== undefined && typeof url !== 'string') {
+        return res.status(400).json({ success: false, message: 'عنوان Webhook غير صالح' });
+    }
+    const normalizedUrl = url && url.trim();
+    if (normalizedUrl) {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(normalizedUrl);
+        } catch {
+            return res.status(400).json({ success: false, message: 'عنوان Webhook غير صالح' });
+        }
+        if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) {
+            return res.status(400).json({ success: false, message: 'Webhook يجب أن يستخدم HTTPS' });
+        }
+    }
+    const confirmation = `DELETE ${type} ${normalizedUrl || 'ALL'}`;
+    if (confirm !== confirmation) {
+        return res.status(400).json({ success: false, message: `أكد العملية بكتابة ${confirmation}` });
+    }
+    const data = { type };
+    if (normalizedUrl) data.url = normalizedUrl;
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('DELETE', '/webhooks', undefined, data)
+    );
+});
+
+app.get('/api/shipbee/pricing', requireDashboardAuth, (req, res) => {
+    const required = ['fromCountry', 'toCountry', 'fromCity', 'toCity', 'weight'];
+    const missing = required.filter(key => !req.query[key]);
+    if (missing.length) {
+        return res.status(400).json({ success: false, message: `حقول مطلوبة: ${missing.join(', ')}` });
+    }
+    const numericFields = ['weight', 'length', 'width', 'height'];
+    for (const field of numericFields) {
+        if (req.query[field] !== undefined &&
+            (!Number.isFinite(Number(req.query[field])) || Number(req.query[field]) <= 0)) {
+            return res.status(400).json({ success: false, message: `${field} يجب أن يكون رقمًا أكبر من صفر` });
+        }
+    }
+    const allowedParams = [
+        'fromCountry', 'toCountry', 'fromCity', 'toCity', 'weight',
+        'length', 'width', 'height', 'fromPostCode', 'toPostCode',
+        'toDistrict', 'isDocument', 'isDangerous', 'arabPost', 'incoterm',
+        'shippingCompany', 'plannedShippingDate', 'packages'
+    ];
+    const params = { serviceSubcategory: 'International' };
+    for (const field of allowedParams) {
+        if (req.query[field] !== undefined) params[field] = req.query[field];
+    }
+    if (params.incoterm && !['DDU', 'DDP'].includes(String(params.incoterm).toUpperCase())) {
+        return res.status(400).json({ success: false, message: 'incoterm يجب أن يكون DDU أو DDP' });
+    }
+    if (params.incoterm) params.incoterm = String(params.incoterm).toUpperCase();
+    if (params.isDocument !== undefined && !['true', 'false'].includes(String(params.isDocument))) {
+        return res.status(400).json({ success: false, message: 'isDocument يجب أن يكون true أو false' });
+    }
+    if (params.isDangerous !== undefined && !['true', 'false'].includes(String(params.isDangerous))) {
+        return res.status(400).json({ success: false, message: 'isDangerous يجب أن يكون true أو false' });
+    }
+    if (params.packages !== undefined) {
+        try {
+            const packages = JSON.parse(params.packages);
+            if (!Array.isArray(packages) || packages.length < 1 || packages.length > 5 ||
+                packages.some(box => ['weight', 'length', 'width', 'height'].some(field =>
+                    !Number.isFinite(Number(box[field])) || Number(box[field]) <= 0
+                ))) {
+                throw new Error('invalid package dimensions');
+            }
+            params.packages = JSON.stringify(packages);
+        } catch {
+            return res.status(400).json({
+                success: false,
+                message: 'packages يجب أن تكون JSON array من 1 إلى 5 صناديق بأوزان وأبعاد موجبة'
+            });
+        }
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('GET', '/pricing/calculate', params)
+    );
+});
+
+app.get('/api/shipbee/countries', requireDashboardAuth, (req, res) =>
+    handleShipBeeDashboardRequest(res, () => requestShipBee('GET', '/api/countries'))
+);
+
+app.get('/api/shipbee/shipment-descriptions', requireDashboardAuth, (req, res) =>
+    handleShipBeeDashboardRequest(res, () => requestShipBee('GET', '/api/shipment-descriptions'))
+);
+
+app.post('/api/shipbee/cancel', requireDashboardAuth, (req, res) => {
+    const { orderNo, confirm } = req.body || {};
+    if (!/^\d+$/.test(String(orderNo || ''))) {
+        return res.status(400).json({ success: false, message: 'orderNo يجب أن يكون رقمًا صحيحًا' });
+    }
+    if (confirm !== `CANCEL ${orderNo}`) {
+        return res.status(400).json({ success: false, message: `أكد الإلغاء بكتابة CANCEL ${orderNo}` });
+    }
+    return handleShipBeeDashboardRequest(
+        res,
+        () => requestShipBee('POST', '/orders/cancel', { orderNo: Number(orderNo) })
+    );
+});
+
 app.get('/dashboard', requireDashboardAuth, (req, res) => res.send(DASHBOARD_HTML));
 app.get('/api/logs', requireDashboardAuth, async (req, res) => res.json(await getLogs()));
 app.delete('/api/logs', requireDashboardAuth, async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
+});
+app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
+    let environment = 'custom';
+    try {
+        const host = new URL(SHIPBEE_BASE_URL).hostname;
+        if (host === 'api.staging.shipbee.io') environment = 'staging';
+        else if (host === 'api.shipbee.io') environment = 'production';
+    } catch (error) {
+        console.error('Invalid SHIPBEE_BASE_URL:', error.message);
+    }
+    res.json({
+        environment,
+        apiKeyConfigured: Boolean(SHIPBEE_API_KEY)
+    });
 });
 app.get('/', (req, res) => res.redirect('/dashboard'));
 
