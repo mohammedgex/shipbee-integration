@@ -35,8 +35,23 @@ const CURRENCY_TO_USD_RATES = Object.fromEntries(
     Object.entries(configuredCurrencyRates).map(([currency, rate]) => [currency.toUpperCase(), rate])
 );
 const PRODUCT_PACKAGING_RECORDS = require('./product-packaging.json');
+const PRODUCT_DIMENSIONS_PATH = fs.existsSync(path.join(__dirname, 'product-dimensions.json')) ?
+    './product-dimensions.json' : './product-packaging.json';
+if (PRODUCT_DIMENSIONS_PATH === './product-packaging.json') {
+    console.warn('[shopify-carrier-rates] product-dimensions.json is missing; using product-packaging.json');
+}
+const loadedProductDimensions = require(PRODUCT_DIMENSIONS_PATH);
+const PRODUCT_DIMENSION_RECORDS = Array.isArray(loadedProductDimensions) ?
+    loadedProductDimensions :
+    (loadedProductDimensions && Array.isArray(loadedProductDimensions.products) ?
+        loadedProductDimensions.products : []);
 const SMSA_VOLUMETRIC_DIVISOR = 5000;
 const SMSA_SHIPPING_COMPANY = 'SMSA GCC Land Express';
+const CARRIER_RATE_CURRENCY = 'QAR';
+
+if (!PRODUCT_DIMENSION_RECORDS.length) {
+    throw new Error(`${PRODUCT_DIMENSIONS_PATH} must contain a non-empty array of product dimension records`);
+}
 
 function normalizeProductTitle(title) {
     return String(title || '')
@@ -141,6 +156,150 @@ function getProductPackaging(item) {
         throw new Error(`تعذر مطابقة اسم المنتج بشكل فريد مع بيانات الأبعاد والوزن: ${identifier}`);
     }
     return packaging;
+}
+
+function createCarrierDimensionIndex(getKey) {
+    const index = new Map();
+    const ambiguous = new Set();
+    for (const product of PRODUCT_DIMENSION_RECORDS) {
+        const key = getKey(product);
+        if (!key || ambiguous.has(key)) continue;
+        const existing = index.get(key);
+        if (!existing) {
+            index.set(key, product);
+        } else if (
+            existing.length !== product.length ||
+            existing.width !== product.width ||
+            existing.height !== product.height ||
+            existing.weightKg !== product.weightKg
+        ) {
+            index.delete(key);
+            ambiguous.add(key);
+        }
+    }
+    return index;
+}
+
+const CARRIER_DIMENSIONS_BY_SKU = createCarrierDimensionIndex(product =>
+    String(product.sku || '').trim()
+);
+const CARRIER_DIMENSIONS_BY_NAME = createCarrierDimensionIndex(product =>
+    normalizeProductTitle(product.name)
+);
+
+function findCarrierProductDimensions(item) {
+    const sku = String(item.sku || '').trim();
+    const name = normalizeProductTitle(item.name || item.title);
+    const exactMatch = CARRIER_DIMENSIONS_BY_SKU.get(sku) ||
+        CARRIER_DIMENSIONS_BY_NAME.get(name);
+    if (exactMatch) return exactMatch;
+    if (!name) return null;
+
+    const matchesByPackage = new Map();
+    for (const product of PRODUCT_DIMENSION_RECORDS) {
+        const candidateName = normalizeProductTitle(product.name);
+        if (!candidateName) continue;
+        const score = getProductNameSimilarity(name, candidateName);
+        const packageKey = [
+            product.length,
+            product.width,
+            product.height,
+            product.weightKg
+        ].join(':');
+        const match = matchesByPackage.get(packageKey);
+        if (!match || score > match.score) matchesByPackage.set(packageKey, { product, score });
+    }
+
+    const matches = [...matchesByPackage.values()].sort((left, right) => right.score - left.score);
+    if (!matches[0] || matches[0].score < 0.82 ||
+        (matches[1] && matches[0].score - matches[1].score < 0.08)) {
+        return null;
+    }
+    return matches[0].product;
+}
+
+function getCarrierItemWeightKg(item, productDimensions) {
+    const grams = Number(item.grams);
+    if (Number.isFinite(grams) && grams > 0) return grams / 1000;
+    const weightKg = Number(productDimensions && productDimensions.weightKg);
+    return Number.isFinite(weightKg) && weightKg > 0 ? weightKg : 0;
+}
+
+function getEstimatedPackageDimensions(weightKg) {
+    const side = Math.cbrt(weightKg * SMSA_VOLUMETRIC_DIVISOR);
+    return { length: side, width: side, height: side };
+}
+
+function calculateCarrierRates(rate) {
+    if (!rate || typeof rate !== 'object' ||
+        !rate.origin || typeof rate.origin !== 'object' ||
+        !rate.destination || typeof rate.destination !== 'object' ||
+        !Array.isArray(rate.items) || !rate.items.length ||
+        !(rate.destination.country || rate.destination.country_code) ||
+        String(rate.currency || '').toUpperCase() !== CARRIER_RATE_CURRENCY) {
+        return [];
+    }
+
+    let actualWeightKg = 0;
+    let totalVolumeCm3 = 0;
+    let maxLength = 0;
+    let maxWidth = 0;
+    let maxHeight = 0;
+
+    for (const item of rate.items) {
+        const quantity = Number(item.quantity);
+        if (!Number.isFinite(quantity) || quantity <= 0) return [];
+
+        const productDimensions = findCarrierProductDimensions(item);
+        const itemWeightKg = getCarrierItemWeightKg(item, productDimensions);
+        const hasProductDimensions = productDimensions &&
+            [productDimensions.length, productDimensions.width, productDimensions.height]
+                .every(value => Number.isFinite(Number(value)) && Number(value) > 0);
+        if (!hasProductDimensions && itemWeightKg <= 0) return [];
+
+        actualWeightKg += itemWeightKg * quantity;
+        const dimensions = hasProductDimensions ? productDimensions :
+            getEstimatedPackageDimensions(itemWeightKg);
+        totalVolumeCm3 += dimensions.length * dimensions.width * dimensions.height * quantity;
+        maxLength = Math.max(maxLength, dimensions.length);
+        maxWidth = Math.max(maxWidth, dimensions.width);
+        maxHeight = Math.max(maxHeight, dimensions.height);
+    }
+
+    if (actualWeightKg <= 0 && totalVolumeCm3 <= 0) return [];
+    if (actualWeightKg <= 0) actualWeightKg = totalVolumeCm3 / SMSA_VOLUMETRIC_DIVISOR;
+
+    const length = Math.max(maxLength, totalVolumeCm3 / (maxWidth * maxHeight));
+    const volumetricWeightKg = (length * maxWidth * maxHeight) / SMSA_VOLUMETRIC_DIVISOR;
+    const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg);
+    if (!Number.isFinite(chargeableWeightKg) || chargeableWeightKg <= 0) return [];
+
+    const minDeliveryDate = new Date();
+    minDeliveryDate.setUTCDate(minDeliveryDate.getUTCDate() + 3);
+    const maxDeliveryDate = new Date();
+    maxDeliveryDate.setUTCDate(maxDeliveryDate.getUTCDate() + 7);
+    const rates = [];
+
+    if (chargeableWeightKg <= 30) {
+        rates.push({
+            service_name: SMSA_SHIPPING_COMPANY,
+            service_code: 'SMSA_GCC_LAND',
+            total_price: Math.round((60 + (chargeableWeightKg * 15)) * 100),
+            currency: CARRIER_RATE_CURRENCY,
+            min_delivery_date: minDeliveryDate.toISOString(),
+            max_delivery_date: maxDeliveryDate.toISOString()
+        });
+    }
+    rates.push({
+        service_name: 'DHL',
+        service_code: 'DHL',
+        total_price: Math.round((120 + (chargeableWeightKg * 35)) * 100),
+        currency: CARRIER_RATE_CURRENCY,
+        min_delivery_date: minDeliveryDate.toISOString(),
+        max_delivery_date: maxDeliveryDate.toISOString()
+    });
+
+    return rates;
 }
 
 // ✅ بيانات Mofage الحقيقية
@@ -627,6 +786,34 @@ async function sendToShipBee(shopifyOrder) {
 // ==========================================
 // 7. الـ Webhook الرئيسي
 // ==========================================
+app.post('/api/shopify/calculate-shipping', (req, res) => {
+    const startedAt = Date.now();
+    try {
+        const rate = req.body && req.body.rate;
+        const rates = calculateCarrierRates(rate);
+        const log = {
+            itemCount: rate && Array.isArray(rate.items) ? rate.items.length : 0,
+            rateCount: rates.length,
+            currency: rate && rate.currency || null,
+            destination: rate && rate.destination &&
+                (rate.destination.country || rate.destination.country_code) || null,
+            durationMs: Date.now() - startedAt
+        };
+        if (rates.length) {
+            console.info('[shopify-carrier-rates] calculated', log);
+        } else {
+            console.warn('[shopify-carrier-rates] no applicable rates; check destination, QAR currency, item weights and dimensions', log);
+        }
+        return res.status(200).json({ rates });
+    } catch (error) {
+        console.error('[shopify-carrier-rates] calculation failed', {
+            message: error.message,
+            durationMs: Date.now() - startedAt
+        });
+        return res.status(200).json({ rates: [] });
+    }
+});
+
 app.post('/webhooks/shopify/order-created', async (req, res) => {
     const startedAt = Date.now();
     const order = req.body;
@@ -1200,6 +1387,14 @@ app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
 });
 app.get('/', (req, res) => res.redirect('/dashboard'));
 
+app.use('/api/shopify/calculate-shipping', (error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    console.error('[shopify-carrier-rates] request parsing failed', {
+        message: error.message
+    });
+    return res.status(200).json({ rates: [] });
+});
+
 // ==========================================
 // 9. تشغيل محلي فقط (Vercel يتجاهله)
 // ==========================================
@@ -1210,6 +1405,7 @@ if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`🚀 http://localhost:${PORT}/dashboard`);
         console.log(`📡 POST /webhooks/shopify/order-created`);
+        console.log(`📦 POST /api/shopify/calculate-shipping`);
         console.log(`🔐 HMAC: ${WEBHOOK_SECRET ? 'مفعّل ✓' : 'غير مضبوط — سيتم رفض الويبهوكات ⚠'}`);
         console.log(`📦 Shopify API: ${SHOPIFY_VERSION}`);
     });
