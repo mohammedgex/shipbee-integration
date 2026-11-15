@@ -146,38 +146,101 @@ function extractBuildingNumber(addr) {
 }
 
 // ==========================================
-// 5. تحديث شوبيفاي (Fulfillment)
+// دالة جلب توكن جديد من Shopify
+// ==========================================
+let cachedToken = process.env.SHOPIFY_ACCESS_TOKEN;
+let tokenExpiresAt = 0; // 0 = استخدم الـ env var مباشرة
+
+async function getShopifyToken(forceRefresh = false) {
+    // لو الـ token الحالي لسه صالح، رجّعه
+    if (!forceRefresh && cachedToken && Date.now() < tokenExpiresAt) {
+        return cachedToken;
+    }
+
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+
+    // لو مفيش client credentials، استخدم الـ env token زي الأول
+    if (!clientId || !clientSecret) {
+        if (cachedToken) return cachedToken;
+        throw new Error('SHOPIFY_ACCESS_TOKEN أو SHOPIFY_CLIENT_ID/SECRET غير موجودين');
+    }
+
+    try {
+        const res = await axios.post(
+            'https://' + SHOPIFY_DOMAIN + '/admin/oauth/access_token',
+            new URLSearchParams({
+                grant_type: 'client_credentials',
+                client_id: clientId,
+                client_secret: clientSecret
+            }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+
+        cachedToken = res.data.access_token;
+        // نجدد قبل الانتهاء بساعة
+        tokenExpiresAt = Date.now() + ((res.data.expires_in - 3600) * 1000);
+        console.log('🔄 تم تجديد Shopify token تلقائياً، صالح حتى ' + new Date(tokenExpiresAt).toISOString());
+        return cachedToken;
+    } catch (e) {
+        console.error('فشل تجديد التوكن:', e.response ? e.response.data : e.message);
+        // لو فشل، استخدم الـ cached لو موجود
+        if (cachedToken) return cachedToken;
+        throw new Error('فشل الحصول على Shopify token: ' + (e.response ? JSON.stringify(e.response.data) : e.message));
+    }
+}
+
+// ==========================================
+// تحديث Shopify (بالتجديد التلقائي)
 // ==========================================
 async function fulfillShopifyOrder(orderId, trackingNumber, trackingCompany) {
-    const base = `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}`;
-    const headers = {
-        'X-Shopify-Access-Token': SHOPIFY_TOKEN,
-        'Content-Type': 'application/json'
-    };
+    const base = 'https://' + SHOPIFY_DOMAIN + '/admin/api/' + SHOPIFY_VERSION;
 
-    const foRes = await axios.get(
-        `${base}/orders/${orderId}/fulfillment_orders.json`, { headers }
-    );
+    async function callShopify(method, url, data) {
+        const token = await getShopifyToken();
+        const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' };
+        try {
+            return method === 'GET' ?
+                await axios.get(url, { headers }) :
+                await axios.post(url, data, { headers });
+        } catch (e) {
+            // لو 401 (token منتهي)، جدد تلقائياً وأعد المحاولة مرة واحدة
+            if (e.response && e.response.status === 401) {
+                console.log('⚠️ Shopify token expired — جاري التجديد...');
+                const freshToken = await getShopifyToken(true);
+                headers['X-Shopify-Access-Token'] = freshToken;
+                return method === 'GET' ?
+                    await axios.get(url, { headers }) :
+                    await axios.post(url, data, { headers });
+            }
+            throw e;
+        }
+    }
+
+    let foRes;
+    try {
+        foRes = await callShopify('GET', base + '/orders/' + orderId + '/fulfillment_orders.json');
+    } catch (e) {
+        throw new Error(describeAxiosError(e, 'Shopify GET fulfillment_orders'));
+    }
 
     const orders = foRes.data.fulfillment_orders || [];
     const open = orders.find(o => o.status === 'open' || o.status === 'in_progress');
+    if (!open) throw new Error('[Shopify] لا يوجد Fulfillment Order مفتوح');
 
-    if (!open) {
-        throw new Error('لا يوجد Fulfillment Order مفتوح (ممكن يكون متشحن بالفعل)');
+    let ffRes;
+    try {
+        ffRes = await callShopify('POST', base + '/fulfillments.json', {
+            fulfillment: {
+                line_items_by_fulfillment_order: [{ fulfillment_order_id: open.id }],
+                tracking_info: { number: trackingNumber, company: trackingCompany },
+                notify_customer: true
+            }
+        });
+    } catch (e) {
+        throw new Error(describeAxiosError(e, 'Shopify POST fulfillments'));
     }
 
-    const ffRes = await axios.post(`${base}/fulfillments.json`, {
-        fulfillment: {
-            line_items_by_fulfillment_order: [{ fulfillment_order_id: open.id }],
-            tracking_info: { number: trackingNumber, company: trackingCompany },
-            notify_customer: true
-        }
-    }, { headers });
-
-    return {
-        fulfillmentId: ffRes.data.fulfillment.id,
-        status: ffRes.data.fulfillment.status
-    };
+    return { fulfillmentId: ffRes.data.fulfillment.id, status: ffRes.data.fulfillment.status };
 }
 
 // ==========================================
@@ -214,7 +277,7 @@ async function sendToShipBee(shopifyOrder) {
             length: 40,
             width: 30,
             height: 20,
-            itemCount: shopifyOrder.line_items?.length || 1,
+            itemCount: shopifyOrder.line_items ? .length || 1,
             totalValue: parseFloat(shopifyOrder.subtotal_price) || 100,
             description: 'Headphones & Earbuds',
             incoTerm: 'DDU',
@@ -222,7 +285,7 @@ async function sendToShipBee(shopifyOrder) {
             plannedShippingDateAndTime: getPlannedShippingDate(),
             lineItems: (shopifyOrder.line_items || []).map((item, i) => ({
                 number: i + 1,
-                description: item.title?.substring(0, 50) || 'Item',
+                description: item.title ? .substring(0, 50) || 'Item',
                 price: parseFloat(item.price) || 10,
                 quantity: { value: item.quantity || 1, unitOfMeasurement: 'PCS' },
                 weight: { netValue: 0.3, grossValue: 0.5 },
@@ -241,21 +304,21 @@ async function sendToShipBee(shopifyOrder) {
                 zipCode: addr.zip || '00000'
             },
             receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
-                shopifyOrder.customer?.first_name ||
-                'Guest',
+                shopifyOrder.customer ? .first_name ||
+            'Guest',
             receiverPhoneNumber: addr.phone || shopifyOrder.phone,
-            receiverEmail: shopifyOrder.email || shopifyOrder.customer?.email
+            receiverEmail: shopifyOrder.email || shopifyOrder.customer ? .email
         }]
     };
 
     const res = await axios.post(
         `${SHIPBEE_BASE_URL}/api/orders`,
         payload, {
-            headers: {
-                'x-api-key': SHIPBEE_API_KEY,
-                'Content-Type': 'application/json'
-            }
+        headers: {
+            'x-api-key': SHIPBEE_API_KEY,
+            'Content-Type': 'application/json'
         }
+    }
     );
 
     return { payload, response: res.data };
@@ -264,7 +327,7 @@ async function sendToShipBee(shopifyOrder) {
 // ==========================================
 // 7. الـ Webhook الرئيسي
 // ==========================================
-app.post('/webhooks/shopify/order-created', async(req, res) => {
+app.post('/webhooks/shopify/order-created', async (req, res) => {
     const startedAt = Date.now();
     const order = req.body;
 
@@ -272,7 +335,7 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
         await pushLog({
             type: 'webhook_rejected',
             reason: 'HMAC invalid',
-            orderId: order?.id
+            orderId: order ? .id
         });
         return res.status(401).send('Unauthorized');
     }
@@ -281,9 +344,9 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
         type: 'webhook_received',
         orderId: order.id,
         orderNumber: order.order_number,
-        customer: order.email || order.customer?.email,
-        country: order.shipping_address?.country,
-        city: order.shipping_address?.city,
+        customer: order.email || order.customer ? .email,
+        country: order.shipping_address ? .country,
+        city: order.shipping_address ? .city,
         total: order.total_price,
         currency: order.currency,
         shopifyPayload: order,
@@ -316,7 +379,7 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
             return res.status(400).json(response);
         }
 
-        const shipment = response.data?.shipment || {};
+        const shipment = response.data ? .shipment || {};
         const tracking = shipment.trackingNumber;
 
         if (!tracking) {
@@ -345,8 +408,8 @@ app.post('/webhooks/shopify/order-created', async(req, res) => {
                 type: 'success',
                 orderId: order.id,
                 orderNumber: order.order_number,
-                customer: order.email || order.customer?.email,
-                country: order.shipping_address?.country,
+                customer: order.email || order.customer ? .email,
+                country: order.shipping_address ? .country,
                 total: order.total_price,
                 currency: order.currency,
                 tracking,
@@ -399,8 +462,8 @@ try {
 }
 
 app.get('/dashboard', (req, res) => res.send(DASHBOARD_HTML));
-app.get('/api/logs', async(req, res) => res.json(await getLogs()));
-app.delete('/api/logs', async(req, res) => {
+app.get('/api/logs', async (req, res) => res.json(await getLogs()));
+app.delete('/api/logs', async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
 });
