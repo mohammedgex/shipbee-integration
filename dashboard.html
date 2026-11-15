@@ -582,6 +582,7 @@
     <script>
         let currentLogs = [];
         let selectedOrderId = null;
+        const hydratedOrders = new Map();
 
         function escapeHtml(value) {
             return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({
@@ -640,19 +641,36 @@
             if (logs.some(log => log.status === 'duplicate_skipped')) {
                 return { label: 'طلب مكرر — تم تجاهله', style: 'b-info', log: null };
             }
+            const processingLog = logs.find(log => log.status === 'processing');
+            if (processingLog && Date.now() - new Date(processingLog.at).getTime() > 120000) {
+                return {
+                    label: 'وصل Shopify ولم تكتمل المعالجة',
+                    style: 'b-failed',
+                    log: processingLog,
+                    stale: true
+                };
+            }
             return { label: 'قيد المعالجة', style: 'b-pending', log: null };
         }
 
         function renderOrderDetails(orderId) {
             const logs = getOrderLogs(orderId);
-            const summary = getOrderSummary(logs);
+            const savedSummary = getOrderSummary(logs);
+            const hydrated = hydratedOrders.get(String(orderId));
+            const summary = hydrated ? {
+                customerName: hydrated.customerName,
+                items: hydrated.items,
+                shippingLines: hydrated.shippingLines
+            } : savedSummary;
             const responseLog = logs.find(log => log.type === 'shipbee_response');
-            const quote = getShippingQuote(logs);
-            const packageDetails = responseLog && responseLog.packageDetails;
+            const quote = getShippingQuote(logs) || (hydrated && hydrated.shippingQuote);
+            const packageDetails = (responseLog && responseLog.packageDetails) ||
+                (hydrated && hydrated.packageDetails);
             const shopifyOrder = logs.find(log => log.orderSummary) ||
                 logs.find(log => log.orderNumber) || {};
             const status = getOrderStatus(logs);
             const tracking = logs.find(log => log.tracking);
+            const displayOrder = hydrated || shopifyOrder;
             const shippingLines = Array.isArray(summary.shippingLines) ? summary.shippingLines : [];
             const customerShipping = shippingLines.length ?
                 shippingLines.map(line => `${escapeHtml(line.title || 'شحن Shopify')}: ${formatAmount(line.price, line.currency)}`).join('، ') :
@@ -685,18 +703,25 @@
             if (status.log && status.log.error) note = status.log.error;
             else if (status.log && status.log.shipbeeResponse && status.log.shipbeeResponse.message) {
                 note = status.log.shipbeeResponse.message;
+            } else if (status.stale) {
+                note = 'مرّ أكثر من دقيقتين دون تسجيل نتيجة التكامل. حدّث التفاصيل، وراجع سجلات الخادم إذا استمرت الحالة.';
             }
+            if (hydrated && hydrated.packageError) note = hydrated.packageError;
+            if (hydrated && hydrated.quoteError) note = [note, hydrated.quoteError].filter(Boolean).join(' — ');
 
             document.getElementById('log-details').innerHTML = `
-                <h3 style="color:#7dd3fc">ملخص الطلب #${escapeHtml(shopifyOrder.orderNumber || orderId)}</h3>
+                <div class="toolbar" style="justify-content:space-between;align-items:center">
+                    <h3 style="color:#7dd3fc">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
+                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر SMSA</button>
+                </div>
                 <div class="order-summary">
                     <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
                     <div class="order-card"><strong>العميل</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
-                    <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(shopifyOrder.total, shopifyOrder.currency)}</span></div>
+                    <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
                     <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'SMSA GCC Land Express')}</span></div>
                     <div class="order-card"><strong>سعر SMSA التقديري</strong><span>${escapeHtml(quoteAmount)}</span></div>
                     <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
-                    <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([shopifyOrder.city, shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
+                    <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
                     <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
                     <div class="order-card"><strong>الوزن</strong><span>${weights}</span></div>
                     <div class="order-card"><strong>رقم التتبع</strong><span>${escapeHtml(tracking ? tracking.tracking : 'لم يصدر بعد')}</span></div>
@@ -709,7 +734,27 @@
                         <thead><tr><th>المنتج</th><th>SKU</th><th>الكمية</th><th>سعر الوحدة</th><th>إجمالي المنتج</th></tr></thead>
                         <tbody>${itemRows}</tbody>
                     </table>
-                </div>`;
+                </div>
+                <p id="order-refresh-message" class="muted" style="margin-top:10px"></p>`;
+            document.getElementById('refresh-order-details').addEventListener('click', () =>
+                refreshOrderDetails(orderId));
+        }
+
+        async function refreshOrderDetails(orderId) {
+            const message = document.getElementById('order-refresh-message');
+            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض SMSA...';
+            try {
+                const details = await apiRequest(
+                    `/api/shopify/orders/${encodeURIComponent(orderId)}/details`
+                );
+                hydratedOrders.set(String(orderId), details);
+                renderOrderDetails(orderId);
+            } catch (error) {
+                if (message) {
+                    message.textContent = `تعذر تحديث التفاصيل: ${error.message}`;
+                    message.className = 'order-note';
+                }
+            }
         }
 
         async function apiRequest(url, options) {
@@ -769,21 +814,32 @@
                     document.getElementById('log-details').textContent = 'لا توجد طلبات حتى الآن.';
                     return;
                 }
-                tbody.innerHTML = logs.map((log, index) => {
-                    const relatedLogs = getOrderLogs(log.orderId);
-                    const orderLog = relatedLogs.find(item => item.orderSummary) || log;
+                const orderGroups = new Map();
+                logs.forEach(log => {
+                    const key = String(log.orderId || log.id);
+                    if (!orderGroups.has(key)) orderGroups.set(key, []);
+                    orderGroups.get(key).push(log);
+                });
+                tbody.innerHTML = [...orderGroups.entries()].map(([orderId, relatedLogs], index) => {
+                    const log = relatedLogs[0];
+                    const orderLog = relatedLogs.find(item => item.orderSummary) ||
+                        relatedLogs.find(item => item.orderNumber) || log;
                     const quote = getShippingQuote(relatedLogs);
+                    const hydrated = hydratedOrders.get(String(orderId));
                     return `
-                        <tr class="main-row" data-log-index="${index}">
+                        <tr class="main-row" data-order-id="${escapeHtml(log.orderId || '')}">
                             <td>${escapeHtml(new Date(log.at).toLocaleString('ar-EG'))}</td>
                             <td>#${escapeHtml(log.orderNumber || log.orderId || '—')}</td>
-                            <td>${escapeHtml(log.customer || orderLog.customer || '—')}</td>
-                            <td>${escapeHtml(log.country || orderLog.country || '—')}</td>
-                            <td>${formatAmount(orderLog.total, orderLog.currency)}</td>
+                            <td>${escapeHtml(log.customer || orderLog.customer || (hydrated && hydrated.customerName) || '—')}</td>
+                            <td>${escapeHtml(log.country || orderLog.country || (hydrated && hydrated.country) || '—')}</td>
+                            <td>${formatAmount(orderLog.total || (hydrated && hydrated.total), orderLog.currency || (hydrated && hydrated.currency))}</td>
                             <td>${escapeHtml(quote && quote.totalCost != null ?
-                                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) : '—')}</td>
+                                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) :
+                                (hydrated && hydrated.shippingQuote ?
+                                    formatAmount(hydrated.shippingQuote.totalCost, hydrated.shippingQuote.currency || hydrated.shippingQuote.currencyCode) :
+                                    '—'))}</td>
                             <td>${escapeHtml(getOrderStatus(relatedLogs).label)}</td>
-                            <td>${escapeHtml(log.tracking || '—')}</td>
+                            <td>${escapeHtml((relatedLogs.find(item => item.tracking) || {}).tracking || '—')}</td>
                         </tr>`;
                 }).join('');
                 if (selectedOrderId && getOrderLogs(selectedOrderId).length) {
@@ -850,12 +906,17 @@
         });
 
         document.getElementById('tbody').addEventListener('click', event => {
-            const row = event.target.closest('tr[data-log-index]');
+            const row = event.target.closest('tr[data-order-id]');
             if (!row) return;
-            const log = currentLogs[Number(row.dataset.logIndex)];
-            if (log && log.orderId) {
-                selectedOrderId = log.orderId;
+            const orderId = row.dataset.orderId;
+            if (orderId) {
+                selectedOrderId = orderId;
                 renderOrderDetails(selectedOrderId);
+                const logs = getOrderLogs(selectedOrderId);
+                const hasSavedDetails = Boolean(getOrderSummary(logs).items && getShippingQuote(logs));
+                if (!hasSavedDetails && !hydratedOrders.has(String(selectedOrderId))) {
+                    refreshOrderDetails(selectedOrderId);
+                }
             }
         });
 

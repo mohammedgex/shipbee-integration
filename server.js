@@ -1097,6 +1097,89 @@ app.post('/api/shipbee/cancel', requireDashboardAuth, (req, res) => {
 
 app.get('/dashboard', requireDashboardAuth, (req, res) => res.send(DASHBOARD_HTML));
 app.get('/api/logs', requireDashboardAuth, async (req, res) => res.json(await getLogs()));
+app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req, res) => {
+    const orderId = String(req.params.orderId || '');
+    if (!/^\d+$/.test(orderId)) {
+        return res.status(400).json({ success: false, message: 'معرّف طلب Shopify غير صالح' });
+    }
+    if (!SHOPIFY_DOMAIN) {
+        return res.status(503).json({ success: false, message: 'SHOPIFY_STORE_DOMAIN غير مضبوط' });
+    }
+
+    let response;
+    try {
+        const token = await getShopifyToken();
+        response = await axios.get(
+            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`,
+            {
+                headers: { 'X-Shopify-Access-Token': token },
+                params: {
+                    fields: [
+                        'id', 'order_number', 'email', 'phone', 'total_price',
+                        'current_subtotal_price', 'subtotal_price', 'currency',
+                        'customer', 'shipping_address', 'shipping_lines', 'line_items'
+                    ].join(',')
+                },
+                timeout: 15000
+            }
+        );
+    } catch (error) {
+        const message = describeAxiosError(error, 'Shopify GET order details');
+        return res.status(error.response ? 502 : 503).json({ success: false, message });
+    }
+
+    const order = response.data && response.data.order;
+    if (!order) {
+        return res.status(404).json({ success: false, message: 'لم يُرجع Shopify بيانات لهذا الطلب' });
+    }
+
+    let packageDetails = null;
+    let packageError = null;
+    let shippingQuote = null;
+    let quoteError = null;
+    try {
+        packageDetails = getOrderPackage(order);
+        try {
+            shippingQuote = await getSmsaQuote(order.shipping_address, packageDetails);
+        } catch (error) {
+            quoteError = error.message;
+        }
+    } catch (error) {
+        packageError = error.message;
+    }
+
+    const address = order.shipping_address || {};
+    const customer = order.customer || {};
+    return res.json({
+        success: true,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        customerName: [
+            customer.first_name || address.first_name,
+            customer.last_name || address.last_name
+        ].filter(Boolean).join(' '),
+        total: order.total_price,
+        currency: order.currency,
+        city: address.city || '',
+        country: address.country || '',
+        items: (Array.isArray(order.line_items) ? order.line_items : []).map(item => ({
+            title: item.title || 'منتج بدون اسم',
+            sku: item.sku || '',
+            quantity: item.quantity,
+            unitPrice: item.price,
+            lineTotal: item.final_line_price || item.line_price || null
+        })),
+        shippingLines: (Array.isArray(order.shipping_lines) ? order.shipping_lines : []).map(line => ({
+            title: line.title || '',
+            price: line.price || null,
+            currency: order.currency || ''
+        })),
+        packageDetails,
+        packageError,
+        shippingQuote,
+        quoteError
+    });
+});
 app.delete('/api/logs', requireDashboardAuth, async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
