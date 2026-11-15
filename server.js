@@ -278,7 +278,7 @@ async function sendToShipBee(shopifyOrder) {
 
     const payload = {
         serviceSubcategory: 'International',
-        paymentMethod: 'MONTHLY_BILL',
+        paymentMethod: 'CREDIT_DEBIT',
         siteId: 'express-staging',
         senderName: SENDER.name,
         senderPhoneNumber: SENDER.phone,
@@ -319,7 +319,7 @@ async function sendToShipBee(shopifyOrder) {
             },
             receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
                 (shopifyOrder.customer && shopifyOrder.customer.first_name) ||
-            'Guest',
+                'Guest',
             receiverPhoneNumber: addr.phone || shopifyOrder.phone,
             receiverEmail: shopifyOrder.email || (shopifyOrder.customer && shopifyOrder.customer.email)
         }]
@@ -330,11 +330,11 @@ async function sendToShipBee(shopifyOrder) {
         res = await axios.post(
             `${SHIPBEE_BASE_URL}/api/orders`,
             payload, {
-                headers: {
-                    'x-api-key': SHIPBEE_API_KEY,
-                    'Content-Type': 'application/json'
-                }
+            headers: {
+                'x-api-key': SHIPBEE_API_KEY,
+                'Content-Type': 'application/json'
             }
+        }
         );
     } catch (error) {
         throw new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
