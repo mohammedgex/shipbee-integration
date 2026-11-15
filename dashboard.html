@@ -348,6 +348,48 @@
             min-width: 720px
         }
 
+        .order-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            margin-top: 16px
+        }
+
+        .order-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px
+        }
+
+        .order-card strong {
+            display: block;
+            color: #7dd3fc;
+            font-size: 12px;
+            margin-bottom: 6px
+        }
+
+        .order-card span {
+            font-size: 16px;
+            font-weight: 600
+        }
+
+        .order-note {
+            margin-top: 12px;
+            color: #fbbf24;
+            font-size: 13px
+        }
+
+        .order-items {
+            min-width: 0 !important;
+            margin-top: 14px
+        }
+
+        .order-items th,
+        .order-items td {
+            padding: 9px
+        }
+
         @media (max-width: 760px) {
             body {
                 padding: 12px
@@ -422,18 +464,18 @@
                 <section id="view-integration" class="view">
                     <div class="panel">
                         <h2>سجلات Shopify ↔ ShipBee</h2>
-                        <p class="muted">السجلات المحلية لآخر الطلبات. لا نعرض نسخة بيانات العميل الخام حفاظًا على الخصوصية.</p>
+                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر SMSA التقديري بطريقة مبسطة.</p>
                         <div class="toolbar">
                             <button class="btn" onclick="loadLogs()">تحديث</button>
                             <button class="btn danger" onclick="clearLogs()">مسح السجلات المحلية</button>
                         </div>
                         <div class="table-wrap">
                             <table>
-                                <thead><tr><th>الوقت</th><th>الطلب</th><th>العميل</th><th>الدولة</th><th>المبلغ</th><th>الحالة</th><th>Tracking</th></tr></thead>
-                                <tbody id="tbody"><tr><td colspan="7" class="empty">جاري التحميل...</td></tr></tbody>
+                                <thead><tr><th>الوقت</th><th>الطلب</th><th>العميل</th><th>الدولة</th><th>إجمالي الطلب</th><th>شحن SMSA التقديري</th><th>الحالة</th><th>التتبع</th></tr></thead>
+                                <tbody id="tbody"><tr><td colspan="8" class="empty">جاري التحميل...</td></tr></tbody>
                             </table>
                         </div>
-                        <pre id="log-details" class="output">اختر سجلًا لعرض تفاصيله.</pre>
+                        <div id="log-details" class="muted" style="margin-top:16px">اختر طلبًا من الجدول لعرض ملخصه.</div>
                     </div>
                 </section>
                 <section id="view-report" class="view">
@@ -539,6 +581,7 @@
     </div>
     <script>
         let currentLogs = [];
+        let selectedOrderId = null;
 
         function escapeHtml(value) {
             return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({
@@ -549,6 +592,124 @@
         function showJson(elementId, value) {
             document.getElementById(elementId).textContent =
                 typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+        }
+
+        function formatAmount(amount, currency) {
+            if (amount == null || amount === '') return 'غير متاح';
+            const value = Number(amount);
+            if (!Number.isFinite(value)) return 'غير متاح';
+            const normalizedCurrency = String(currency || '').toUpperCase();
+            if (/^[A-Z]{3}$/.test(normalizedCurrency)) {
+                try {
+                    return new Intl.NumberFormat('en', {
+                        style: 'currency',
+                        currency: normalizedCurrency
+                    }).format(value);
+                } catch {
+                    return `${value.toFixed(2)} ${normalizedCurrency}`;
+                }
+            }
+            return `${value.toFixed(2)} ${/^[A-Z]{3}$/.test(normalizedCurrency) ?
+                normalizedCurrency : '(العملة غير محددة)'}`;
+        }
+
+        function getOrderLogs(orderId) {
+            return currentLogs.filter(log => String(log.orderId) === String(orderId));
+        }
+
+        function getOrderSummary(logs) {
+            const log = logs.find(item => item.orderSummary);
+            return log ? log.orderSummary : {};
+        }
+
+        function getShippingQuote(logs) {
+            const log = logs.find(item => item.shippingQuote);
+            return log ? log.shippingQuote : null;
+        }
+
+        function getOrderStatus(logs) {
+            const success = logs.find(log => log.status === 'success');
+            if (success) return { label: 'تم إنشاء الشحنة وتحديث Shopify', style: 'b-success', log: success };
+            const updateFailure = logs.find(log => log.status === 'shopify_update_failed');
+            if (updateFailure) return { label: 'الشحنة أُنشئت، لكن تحديث Shopify يحتاج مراجعة', style: 'b-pending', log: updateFailure };
+            const rejected = logs.find(log =>
+                log.type === 'shipbee_response' && log.shipbeeResponse && !log.shipbeeResponse.success);
+            if (rejected) return { label: 'ShipBee لم يقبل الطلب', style: 'b-failed', log: rejected };
+            const error = logs.find(log => log.status === 'error');
+            if (error) return { label: 'تعذر تجهيز الشحنة', style: 'b-failed', log: error };
+            if (logs.some(log => log.status === 'duplicate_skipped')) {
+                return { label: 'طلب مكرر — تم تجاهله', style: 'b-info', log: null };
+            }
+            return { label: 'قيد المعالجة', style: 'b-pending', log: null };
+        }
+
+        function renderOrderDetails(orderId) {
+            const logs = getOrderLogs(orderId);
+            const summary = getOrderSummary(logs);
+            const responseLog = logs.find(log => log.type === 'shipbee_response');
+            const quote = getShippingQuote(logs);
+            const packageDetails = responseLog && responseLog.packageDetails;
+            const shopifyOrder = logs.find(log => log.orderSummary) ||
+                logs.find(log => log.orderNumber) || {};
+            const status = getOrderStatus(logs);
+            const tracking = logs.find(log => log.tracking);
+            const shippingLines = Array.isArray(summary.shippingLines) ? summary.shippingLines : [];
+            const customerShipping = shippingLines.length ?
+                shippingLines.map(line => `${escapeHtml(line.title || 'شحن Shopify')}: ${formatAmount(line.price, line.currency)}`).join('، ') :
+                'غير متوفر في بيانات Shopify';
+            const items = Array.isArray(summary.items) ? summary.items : [];
+            const itemRows = items.length ? items.map(item => {
+                const calculatedLineTotal = Number(item.unitPrice) * Number(item.quantity);
+                const lineTotal = item.lineTotal != null ? item.lineTotal :
+                    (Number.isFinite(calculatedLineTotal) ? calculatedLineTotal : null);
+                return `
+                    <tr>
+                        <td>${escapeHtml(item.title || 'منتج بدون اسم')}</td>
+                        <td>${escapeHtml(item.sku || 'بدون SKU')}</td>
+                        <td>${escapeHtml(item.quantity == null ? '—' : item.quantity)}</td>
+                        <td>${formatAmount(item.unitPrice, shopifyOrder.currency)}</td>
+                        <td>${formatAmount(lineTotal, shopifyOrder.currency)}</td>
+                    </tr>`;
+            }).join('') :
+                '<tr><td colspan="5" class="empty">تفاصيل المنتجات غير متوفرة لهذا السجل.</td></tr>';
+            const quoteAmount = quote && quote.totalCost != null ?
+                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) :
+                'لم يصل عرض سعر';
+            const packageDimensions = packageDetails ?
+                `${escapeHtml(packageDetails.length)} × ${escapeHtml(packageDetails.width)} × ${escapeHtml(packageDetails.height)} سم` :
+                'غير متوفر';
+            const weights = packageDetails ?
+                `${escapeHtml(packageDetails.actualWeightKg)} كجم فعلي / ${escapeHtml(packageDetails.chargeableWeightKg)} كجم للفوترة` :
+                'غير متوفر';
+            let note = '';
+            if (status.log && status.log.error) note = status.log.error;
+            else if (status.log && status.log.shipbeeResponse && status.log.shipbeeResponse.message) {
+                note = status.log.shipbeeResponse.message;
+            }
+
+            document.getElementById('log-details').innerHTML = `
+                <h3 style="color:#7dd3fc">ملخص الطلب #${escapeHtml(shopifyOrder.orderNumber || orderId)}</h3>
+                <div class="order-summary">
+                    <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
+                    <div class="order-card"><strong>العميل</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
+                    <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(shopifyOrder.total, shopifyOrder.currency)}</span></div>
+                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'SMSA GCC Land Express')}</span></div>
+                    <div class="order-card"><strong>سعر SMSA التقديري</strong><span>${escapeHtml(quoteAmount)}</span></div>
+                    <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
+                    <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([shopifyOrder.city, shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
+                    <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
+                    <div class="order-card"><strong>الوزن</strong><span>${weights}</span></div>
+                    <div class="order-card"><strong>رقم التتبع</strong><span>${escapeHtml(tracking ? tracking.tracking : 'لم يصدر بعد')}</span></div>
+                </div>
+                <p class="order-note">سعر SMSA تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
+                ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
+                <h3 style="color:#7dd3fc;margin-top:18px">المنتجات</h3>
+                <div class="table-wrap">
+                    <table class="order-items">
+                        <thead><tr><th>المنتج</th><th>SKU</th><th>الكمية</th><th>سعر الوحدة</th><th>إجمالي المنتج</th></tr></thead>
+                        <tbody>${itemRows}</tbody>
+                    </table>
+                </div>`;
         }
 
         async function apiRequest(url, options) {
@@ -604,22 +765,33 @@
 
                 const tbody = document.getElementById('tbody');
                 if (!logs.length) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="empty">لا توجد سجلات.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty">لا توجد سجلات.</td></tr>';
+                    document.getElementById('log-details').textContent = 'لا توجد طلبات حتى الآن.';
                     return;
                 }
-                tbody.innerHTML = logs.map((log, index) => `
-                    <tr class="main-row" data-log-index="${index}">
-                        <td>${escapeHtml(new Date(log.at).toLocaleString('ar-EG'))}</td>
-                        <td>#${escapeHtml(log.orderNumber || log.orderId || '—')}</td>
-                        <td>${escapeHtml(log.customer || '—')}</td>
-                        <td>${escapeHtml(log.country || '—')}</td>
-                        <td>${escapeHtml(log.total || '—')} ${escapeHtml(log.currency || '')}</td>
-                        <td>${escapeHtml(log.status || '—')}</td>
-                        <td>${escapeHtml(log.tracking || '—')}</td>
-                    </tr>`).join('');
+                tbody.innerHTML = logs.map((log, index) => {
+                    const relatedLogs = getOrderLogs(log.orderId);
+                    const orderLog = relatedLogs.find(item => item.orderSummary) || log;
+                    const quote = getShippingQuote(relatedLogs);
+                    return `
+                        <tr class="main-row" data-log-index="${index}">
+                            <td>${escapeHtml(new Date(log.at).toLocaleString('ar-EG'))}</td>
+                            <td>#${escapeHtml(log.orderNumber || log.orderId || '—')}</td>
+                            <td>${escapeHtml(log.customer || orderLog.customer || '—')}</td>
+                            <td>${escapeHtml(log.country || orderLog.country || '—')}</td>
+                            <td>${formatAmount(orderLog.total, orderLog.currency)}</td>
+                            <td>${escapeHtml(quote && quote.totalCost != null ?
+                                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) : '—')}</td>
+                            <td>${escapeHtml(getOrderStatus(relatedLogs).label)}</td>
+                            <td>${escapeHtml(log.tracking || '—')}</td>
+                        </tr>`;
+                }).join('');
+                if (selectedOrderId && getOrderLogs(selectedOrderId).length) {
+                    renderOrderDetails(selectedOrderId);
+                }
             } catch (error) {
                 document.getElementById('tbody').innerHTML =
-                    `<tr><td colspan="7" class="empty">${escapeHtml(error.message)}</td></tr>`;
+                    `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
             }
         }
 
@@ -627,6 +799,7 @@
             if (!confirm('تأكيد مسح سجلات التكامل المحلية؟')) return;
             try {
                 await apiRequest('/api/logs', { method: 'DELETE' });
+                selectedOrderId = null;
                 document.getElementById('log-details').textContent = 'تم مسح السجلات.';
                 await loadLogs();
             } catch (error) {
@@ -680,7 +853,10 @@
             const row = event.target.closest('tr[data-log-index]');
             if (!row) return;
             const log = currentLogs[Number(row.dataset.logIndex)];
-            if (log) showJson('log-details', log);
+            if (log && log.orderId) {
+                selectedOrderId = log.orderId;
+                renderOrderDetails(selectedOrderId);
+            }
         });
 
         const today = new Date();

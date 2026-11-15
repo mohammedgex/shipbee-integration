@@ -34,6 +34,114 @@ for (const [currency, rate] of Object.entries(configuredCurrencyRates)) {
 const CURRENCY_TO_USD_RATES = Object.fromEntries(
     Object.entries(configuredCurrencyRates).map(([currency, rate]) => [currency.toUpperCase(), rate])
 );
+const PRODUCT_PACKAGING_RECORDS = require('./product-packaging.json');
+const SMSA_VOLUMETRIC_DIVISOR = 5000;
+const SMSA_SHIPPING_COMPANY = 'SMSA GCC Land Express';
+
+function normalizeProductTitle(title) {
+    return String(title || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/\s+default title$/, '');
+}
+
+function getProductNameSimilarity(left, right) {
+    const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+        const currentRow = [leftIndex];
+        for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+            const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+            currentRow[rightIndex] = Math.min(
+                currentRow[rightIndex - 1] + 1,
+                previousRow[rightIndex] + 1,
+                previousRow[rightIndex - 1] + substitutionCost
+            );
+        }
+        for (let index = 0; index < currentRow.length; index += 1) {
+            previousRow[index] = currentRow[index];
+        }
+    }
+
+    const editSimilarity = 1 - previousRow[right.length] / Math.max(left.length, right.length);
+    const leftWords = new Set(left.split(' '));
+    const rightWords = new Set(right.split(' '));
+    const sharedWords = [...leftWords].filter(word => rightWords.has(word)).length;
+    const wordSimilarity = (2 * sharedWords) / (leftWords.size + rightWords.size);
+    return (editSimilarity * 0.65) + (wordSimilarity * 0.35);
+}
+
+function getFuzzyProductPackaging(name) {
+    if (!name) return null;
+
+    const bestMatchByPackage = new Map();
+    for (const product of PRODUCT_PACKAGING_RECORDS) {
+        const candidateName = normalizeProductTitle(product.name);
+        const score = getProductNameSimilarity(name, candidateName);
+        const packageKey = [
+            product.length,
+            product.width,
+            product.height,
+            product.weightKg
+        ].join(':');
+        const current = bestMatchByPackage.get(packageKey);
+        if (!current || score > current.score) {
+            bestMatchByPackage.set(packageKey, { product, score });
+        }
+    }
+
+    const matches = [...bestMatchByPackage.values()].sort((left, right) => right.score - left.score);
+    const best = matches[0];
+    const secondBest = matches[1];
+    if (!best || best.score < 0.82 || (secondBest && best.score - secondBest.score < 0.08)) {
+        return null;
+    }
+    return best.product;
+}
+
+function createPackagingIndex(getKey) {
+    const index = new Map();
+    const ambiguous = new Set();
+
+    for (const product of PRODUCT_PACKAGING_RECORDS) {
+        const key = getKey(product);
+        if (!key || ambiguous.has(key)) continue;
+
+        const existing = index.get(key);
+        if (!existing) {
+            index.set(key, product);
+        } else if (
+            existing.length !== product.length ||
+            existing.width !== product.width ||
+            existing.height !== product.height ||
+            existing.weightKg !== product.weightKg
+        ) {
+            index.delete(key);
+            ambiguous.add(key);
+        }
+    }
+
+    return index;
+}
+
+const PRODUCT_PACKAGING_BY_SKU = createPackagingIndex(product => product.sku);
+const PRODUCT_PACKAGING_BY_NAME = createPackagingIndex(product => normalizeProductTitle(product.name));
+
+function getProductPackaging(item) {
+    const sku = String(item.sku || '').trim();
+    const name = normalizeProductTitle(item.title);
+    const packaging = PRODUCT_PACKAGING_BY_SKU.get(sku) ||
+        PRODUCT_PACKAGING_BY_NAME.get(name) ||
+        getFuzzyProductPackaging(name);
+    if (!packaging) {
+        const identifier = [sku && `SKU ${sku}`, item.title].filter(Boolean).join(' / ') || 'غير معروف';
+        throw new Error(`تعذر مطابقة اسم المنتج بشكل فريد مع بيانات الأبعاد والوزن: ${identifier}`);
+    }
+    return packaging;
+}
 
 // ✅ بيانات Mofage الحقيقية
 const SENDER = {
@@ -181,11 +289,7 @@ function toUsd(value, currency) {
 }
 
 function getLineItemWeightKg(item) {
-    const grams = Number(item.grams);
-    if (!Number.isFinite(grams) || grams <= 0) {
-        throw new Error(`وزن المنتج غير موجود أو غير صالح: ${item.title || 'منتج بدون اسم'}`);
-    }
-    return grams / 1000;
+    return getProductPackaging(item).weightKg;
 }
 
 function getDiscountedUnitPrice(item) {
@@ -206,17 +310,64 @@ function getOrderWeightKg(order) {
     if (Number.isFinite(grams) && grams > 0) return grams / 1000;
 
     const lineItems = order.line_items || [];
-    const itemGrams = lineItems.reduce((total, item) => {
-        const weight = Number(item.grams);
+    const itemWeightKg = lineItems.reduce((total, item) => {
         const quantity = Number(item.quantity);
-        return total + (Number.isFinite(weight) && weight > 0 && Number.isFinite(quantity) && quantity > 0 ?
-            weight * quantity : 0);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error(`كمية المنتج غير صالحة: ${item.title || 'منتج بدون اسم'}`);
+        }
+        return total + (getLineItemWeightKg(item) * quantity);
     }, 0);
-    if (itemGrams <= 0) throw new Error('وزن الشحنة غير موجود أو غير صالح');
-    return itemGrams / 1000;
+    if (itemWeightKg <= 0) throw new Error('وزن الشحنة غير موجود أو غير صالح');
+    return itemWeightKg;
 }
 
-async function getDhlQuote(address, weightKg) {
+function calculateChargeableWeight(actualWeightKg, lengthCm, widthCm, heightCm) {
+    const volumetricWeightKg = (lengthCm * widthCm * heightCm) / SMSA_VOLUMETRIC_DIVISOR;
+    return Math.max(actualWeightKg, volumetricWeightKg);
+}
+
+function getOrderPackage(order) {
+    const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
+    if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
+
+    let totalVolumeCm3 = 0;
+    let lineItemsWeightKg = 0;
+    let maxLength = 0;
+    let maxWidth = 0;
+    let maxHeight = 0;
+
+    for (const item of lineItems) {
+        const packaging = getProductPackaging(item);
+
+        const quantity = Number(item.quantity);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error(`كمية المنتج غير صالحة: ${item.title || 'منتج بدون اسم'}`);
+        }
+
+        totalVolumeCm3 += packaging.length * packaging.width * packaging.height * quantity;
+        lineItemsWeightKg += getLineItemWeightKg(item) * quantity;
+        maxLength = Math.max(maxLength, packaging.length);
+        maxWidth = Math.max(maxWidth, packaging.width);
+        maxHeight = Math.max(maxHeight, packaging.height);
+    }
+
+    const isSingleUnit = lineItems.length === 1 && Number(lineItems[0].quantity) === 1;
+    const width = maxWidth;
+    const height = maxHeight;
+    const length = isSingleUnit ? maxLength :
+        Math.max(maxLength, Math.ceil((totalVolumeCm3 / (width * height)) * 10) / 10);
+    const actualWeightKg = Math.max(lineItemsWeightKg, getOrderWeightKg(order));
+
+    return {
+        actualWeightKg,
+        chargeableWeightKg: calculateChargeableWeight(actualWeightKg, length, width, height),
+        length,
+        width,
+        height
+    };
+}
+
+async function getSmsaQuote(address, packageDetails) {
     if (!SHIPBEE_API_KEY) throw new Error('SHIPBEE_API_KEY غير مضبوط');
 
     const params = {
@@ -225,12 +376,12 @@ async function getDhlQuote(address, weightKg) {
         fromCity: SENDER.address.city,
         toCountry: address.country,
         toCity: address.city,
-        weight: weightKg,
-        length: 40,
-        width: 30,
-        height: 20,
+        weight: packageDetails.chargeableWeightKg,
+        length: packageDetails.length,
+        width: packageDetails.width,
+        height: packageDetails.height,
         incoterm: 'DDU',
-        shippingCompany: 'DHL'
+        shippingCompany: SMSA_SHIPPING_COMPANY
     };
     if (address.zip) params.toPostCode = address.zip;
 
@@ -247,15 +398,15 @@ async function getDhlQuote(address, weightKg) {
     const days = Array.isArray(response.data) ? response.data :
         (response.data && Array.isArray(response.data.data) ? response.data.data : []);
     for (const day of days) {
-        const dhl = (day.carriers || []).find(carrier =>
-            carrier.carrier === 'DHL' &&
+        const smsa = (day.carriers || []).find(carrier =>
+            carrier.carrier === SMSA_SHIPPING_COMPANY &&
             carrier.totalCost !== null &&
             Number.isFinite(Number(carrier.totalCost))
         );
-        if (dhl && day.date) return day.date;
+        if (smsa) return smsa;
     }
 
-    throw new Error('ShipBee لم يُرجع عرض DHL صالحًا لهذا العنوان والوزن');
+    throw new Error(`ShipBee لم يُرجع عرض ${SMSA_SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`);
 }
 
 function extractBuildingNumber(addr) {
@@ -386,9 +537,9 @@ async function sendToShipBee(shopifyOrder) {
 
     const addr = shopifyOrder.shipping_address;
     const currency = shopifyOrder.currency;
-    const weightKg = getOrderWeightKg(shopifyOrder);
     const lineItems = Array.isArray(shopifyOrder.line_items) ? shopifyOrder.line_items : [];
     if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
+    const packageDetails = getOrderPackage(shopifyOrder);
 
     const missing = [];
     if (!addr.address1) missing.push('address1');
@@ -414,7 +565,7 @@ async function sendToShipBee(shopifyOrder) {
         },
         manufacturerCountry: 'China'
     }));
-    const quoteDate = await getDhlQuote(addr, weightKg);
+    const shippingQuote = await getSmsaQuote(addr, packageDetails);
     const payload = {
         serviceSubcategory: 'International',
         paymentMethod: 'MONTHLY_BILL',
@@ -424,17 +575,16 @@ async function sendToShipBee(shopifyOrder) {
         senderCompanyName: SENDER.company,
         fromAddress: SENDER.address,
         shipment: {
-            shippingCompany: 'DHL',
-            weight: weightKg,
-            length: 40,
-            width: 30,
-            height: 20,
+            shippingCompany: SMSA_SHIPPING_COMPANY,
+            weight: packageDetails.chargeableWeightKg,
+            length: packageDetails.length,
+            width: packageDetails.width,
+            height: packageDetails.height,
             itemCount: 1,
             totalValue: customsTotalValue,
             description: 'Headphones & Earbuds',
             incoterm: 'DDU',
             purpose: 'commercial',
-            plannedShippingDateAndTime: `${quoteDate}T10:00:00 GMT+03:00`,
             lineItems: customsLineItems
         },
         stops: [{
@@ -471,7 +621,7 @@ async function sendToShipBee(shopifyOrder) {
         throw new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
     }
 
-    return { payload, response: res.data };
+    return { payload, response: res.data, packageDetails, shippingQuote };
 }
 
 // ==========================================
@@ -503,6 +653,24 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         city: order.shipping_address && order.shipping_address.city,
         total: order.total_price,
         currency: order.currency,
+        orderSummary: {
+            customerName: [
+                order.customer && order.customer.first_name || order.shipping_address && order.shipping_address.first_name,
+                order.customer && order.customer.last_name || order.shipping_address && order.shipping_address.last_name
+            ].filter(Boolean).join(' '),
+            items: (Array.isArray(order.line_items) ? order.line_items : []).map(item => ({
+                title: item.title || 'منتج بدون اسم',
+                sku: item.sku || '',
+                quantity: item.quantity,
+                unitPrice: item.price,
+                lineTotal: item.final_line_price || item.line_price || null
+            })),
+            shippingLines: (Array.isArray(order.shipping_lines) ? order.shipping_lines : []).map(line => ({
+                title: line.title || '',
+                price: line.price || null,
+                currency: order.currency || ''
+            }))
+        },
         status: 'processing'
     });
 
@@ -565,12 +733,14 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             }
         }
 
-        const { payload, response } = await sendToShipBee(order);
+        const { payload, response, packageDetails, shippingQuote } = await sendToShipBee(order);
 
         await pushLog({
             type: 'shipbee_response',
             orderId: order.id,
             orderNumber: order.order_number,
+            packageDetails,
+            shippingQuote,
             shipbeePayload: payload,
             shipbeeResponse: response,
             status: response.success ? 'shipbee_ok' : 'shipbee_failed'
@@ -601,7 +771,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             const ff = await fulfillShopifyOrder(
                 order.id,
                 tracking,
-                shipment.shippingCompany || 'DHL'
+                shipment.shippingCompany || SMSA_SHIPPING_COMPANY
             );
 
             await pushLog({
@@ -704,8 +874,7 @@ async function requestShipBee(method, endpoint, params, data) {
         const response = await axios({
             method,
             url: endpoint.startsWith('/api/') ?
-                `${SHIPBEE_BASE_URL}${endpoint}` :
-                `${SHIPBEE_BASE_URL}/api/v1${endpoint}`,
+                `${SHIPBEE_BASE_URL}${endpoint}` : `${SHIPBEE_BASE_URL}/api/v1${endpoint}`,
             headers: {
                 'x-api-key': SHIPBEE_API_KEY,
                 'Content-Type': 'application/json'

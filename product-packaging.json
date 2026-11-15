@@ -1,0 +1,2858 @@
+[
+  {
+    "sku": "30204100034",
+    "name": "LEATHER TRAY-01-WOOD BEIGE",
+    "length": 44.0,
+    "width": 8.0,
+    "height": 33.0,
+    "weightKg": 1.59
+  },
+  {
+    "sku": "",
+    "name": "LEATHER TRAY-02-BRASS",
+    "length": 45.0,
+    "width": 8.0,
+    "height": 31.0,
+    "weightKg": 1.745
+  },
+  {
+    "sku": "30204100036",
+    "name": "LEATHER TRAY-03-ROUND BEIGE",
+    "length": 37.0,
+    "width": 5.0,
+    "height": 38.0,
+    "weightKg": 1.43
+  },
+  {
+    "sku": "30204100069",
+    "name": "LEATHER TISSUE BOX 01 BEIGE",
+    "length": 19.0,
+    "width": 19.0,
+    "height": 19.0,
+    "weightKg": 1.2
+  },
+  {
+    "sku": "30204100037",
+    "name": "LEATHER STORAGE BOX 01 LARGE BEIGE",
+    "length": 33.0,
+    "width": 9.0,
+    "height": 21.0,
+    "weightKg": 0.975
+  },
+  {
+    "sku": "30204100070",
+    "name": "LEATHER STORAGE BOX 01 SMALL BEIGE",
+    "length": 28.0,
+    "width": 10.0,
+    "height": 19.0,
+    "weightKg": 0.77
+  },
+  {
+    "sku": "30204100038",
+    "name": "LEATHER PHOTO FRAME-01 LARGE BEIGE",
+    "length": 33.0,
+    "width": 5.0,
+    "height": 28.0,
+    "weightKg": 1.025
+  },
+  {
+    "sku": "30204100039",
+    "name": "LEATHER PHOTO FRAME-01 SMALL BEIGE",
+    "length": 30.0,
+    "width": 5.0,
+    "height": 23.0,
+    "weightKg": 0.85
+  },
+  {
+    "sku": "30204100040",
+    "name": "LEATHER PHOTO FRAME-02 LARGE BEIGE",
+    "length": 34.0,
+    "width": 6.0,
+    "height": 29.0,
+    "weightKg": 0.935
+  },
+  {
+    "sku": "30204100041",
+    "name": "LEATHER PHOTO FRAME-02 SMALL BEIGE",
+    "length": 29.0,
+    "width": 5.0,
+    "height": 24.0,
+    "weightKg": 0.705
+  },
+  {
+    "sku": "30204100042",
+    "name": "DECORATIVE BOOK-01 SMALL BEIGE",
+    "length": 30.0,
+    "width": 23.0,
+    "height": 4.0,
+    "weightKg": 1.255
+  },
+  {
+    "sku": "30204100044",
+    "name": "DECORATIVE BOOK-01 LARGE BEIGE",
+    "length": 38.0,
+    "width": 24.0,
+    "height": 5.0,
+    "weightKg": 1.665
+  },
+  {
+    "sku": "30204100064",
+    "name": "LEATHER PHOTO FRAME 03 LARGE BEIGE",
+    "length": 34.0,
+    "width": 5.0,
+    "height": 29.0,
+    "weightKg": 1.29
+  },
+  {
+    "sku": "30204100067",
+    "name": "LEATHER PHOTO FRAME 03 SMALL BEIGE",
+    "length": 29.0,
+    "width": 5.0,
+    "height": 25.0,
+    "weightKg": 1.0
+  },
+  {
+    "sku": "30204100072",
+    "name": "LEATHER DESK OFFICE SET",
+    "length": 59.5,
+    "width": 5.5,
+    "height": 46.0,
+    "weightKg": 1.127
+  },
+  {
+    "sku": "30204100068",
+    "name": "LEATHER DESK OFFICE SET",
+    "length": 12.0,
+    "width": 12.0,
+    "height": 12.0,
+    "weightKg": 0.375
+  },
+  {
+    "sku": "30204100062",
+    "name": "LEATHER DESK OFFICE SET",
+    "length": 16.5,
+    "width": 7.5,
+    "height": 15.0,
+    "weightKg": 0.335
+  },
+  {
+    "sku": "30204100063",
+    "name": "LEATHER DESK OFFICE SET",
+    "length": 30.0,
+    "width": 8.0,
+    "height": 14.0,
+    "weightKg": 0.555
+  },
+  {
+    "sku": "30204100075",
+    "name": "ARTIFICIAL FLOWERS-COLOURED",
+    "length": 20.0,
+    "width": 19.0,
+    "height": 51.0,
+    "weightKg": 0.165
+  },
+  {
+    "sku": "30204100074",
+    "name": "ARTIFICIAL FLOWERS-GREEN",
+    "length": 12.0,
+    "width": 12.0,
+    "height": 66.0,
+    "weightKg": 0.11
+  },
+  {
+    "sku": "",
+    "name": "ARTIFICIAL FLOWERS-MINT GREEN",
+    "length": 10.0,
+    "width": 10.0,
+    "height": 52.0,
+    "weightKg": 0.08
+  },
+  {
+    "sku": "30204100119",
+    "name": "ARTIFICIAL FLOWERS-WHITE",
+    "length": 10.0,
+    "width": 10.0,
+    "height": 52.0,
+    "weightKg": 0.08
+  },
+  {
+    "sku": "",
+    "name": "PEAR-BIG",
+    "length": 7.0,
+    "width": 7.0,
+    "height": 12.0,
+    "weightKg": 0.45
+  },
+  {
+    "sku": "",
+    "name": "PEAR-SMALL",
+    "length": 7.0,
+    "width": 6.0,
+    "height": 9.0,
+    "weightKg": 0.225
+  },
+  {
+    "sku": "",
+    "name": "APPLE-SMALL",
+    "length": 6.0,
+    "width": 6.0,
+    "height": 10.0,
+    "weightKg": 0.39
+  },
+  {
+    "sku": "",
+    "name": "APPLE-MEDIUM",
+    "length": 9.0,
+    "width": 8.0,
+    "height": 12.0,
+    "weightKg": 0.56
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 55X55CM",
+    "length": 53.0,
+    "width": 53.0,
+    "height": 17.0,
+    "weightKg": 1.795
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 45X45CM",
+    "length": 44.0,
+    "width": 44.0,
+    "height": 17.0,
+    "weightKg": 1.53
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 35X55CM",
+    "length": 60.0,
+    "width": 34.0,
+    "height": 14.0,
+    "weightKg": 1.065
+  },
+  {
+    "sku": "",
+    "name": "BED THROW SIZE 70X300CM",
+    "length": 39.0,
+    "width": 36.0,
+    "height": 7.0,
+    "weightKg": 1.36
+  },
+  {
+    "sku": "30204100015",
+    "name": "DECORATIVE VASE-SMALL",
+    "length": 28.0,
+    "width": 28.0,
+    "height": 28.0,
+    "weightKg": 1.61
+  },
+  {
+    "sku": "",
+    "name": "DECORATIVE VASE-LARGE",
+    "length": 25.0,
+    "width": 25.0,
+    "height": 37.0,
+    "weightKg": 2.015
+  },
+  {
+    "sku": "30204100114",
+    "name": "DECORATIVE POT-01",
+    "length": 44.0,
+    "width": 44.0,
+    "height": 35.0,
+    "weightKg": 5.075
+  },
+  {
+    "sku": "30204100115",
+    "name": "DECORATIVE POT-02",
+    "length": 43.0,
+    "width": 43.0,
+    "height": 28.0,
+    "weightKg": 3.3
+  },
+  {
+    "sku": "30204100007",
+    "name": "VASE 01- Small",
+    "length": 24.0,
+    "width": 22.0,
+    "height": 34.0,
+    "weightKg": 5.4
+  },
+  {
+    "sku": "30204100008",
+    "name": "VASE 02- Large",
+    "length": 28.0,
+    "width": 27.0,
+    "height": 55.0,
+    "weightKg": 9.91
+  },
+  {
+    "sku": "30204100005",
+    "name": "VASE 03-Medium",
+    "length": 22.0,
+    "width": 23.0,
+    "height": 48.0,
+    "weightKg": 6.86
+  },
+  {
+    "sku": "30204100004",
+    "name": "VASE 04-Small",
+    "length": 21.0,
+    "width": 21.0,
+    "height": 35.5,
+    "weightKg": 4.345
+  },
+  {
+    "sku": "30204100006",
+    "name": "VASE 05-Large",
+    "length": 32.0,
+    "width": 11.0,
+    "height": 35.0,
+    "weightKg": 4.73
+  },
+  {
+    "sku": "",
+    "name": "VASE 07-Large",
+    "length": 65.0,
+    "width": 65.0,
+    "height": 30.0,
+    "weightKg": 14.685
+  },
+  {
+    "sku": "30204100011",
+    "name": "VASE 08-Large",
+    "length": 41.0,
+    "width": 20.0,
+    "height": 39.0,
+    "weightKg": 5.15
+  },
+  {
+    "sku": "30204100003",
+    "name": "VASE 09-Small",
+    "length": 24.0,
+    "width": 24.0,
+    "height": 33.0,
+    "weightKg": 3.24
+  },
+  {
+    "sku": "30204100030",
+    "name": "VASE 11-Small",
+    "length": 21.0,
+    "width": 18.0,
+    "height": 41.0,
+    "weightKg": 4.06
+  },
+  {
+    "sku": "30204100032",
+    "name": "VASE 12-Small",
+    "length": 21.0,
+    "width": 21.0,
+    "height": 33.0,
+    "weightKg": 5.945
+  },
+  {
+    "sku": "30204100013",
+    "name": "VASE 13-Large",
+    "length": 22.0,
+    "width": 22.0,
+    "height": 33.0,
+    "weightKg": 5.915
+  },
+  {
+    "sku": "30204100014",
+    "name": "VASE 14",
+    "length": 38.0,
+    "width": 19.0,
+    "height": 39.0,
+    "weightKg": 5.44
+  },
+  {
+    "sku": "30204100010",
+    "name": "VASE 15-Large",
+    "length": 22.0,
+    "width": 23.0,
+    "height": 44.0,
+    "weightKg": 6.08
+  },
+  {
+    "sku": "30204100009",
+    "name": "VASE 16-Small",
+    "length": 20.0,
+    "width": 20.0,
+    "height": 36.0,
+    "weightKg": 4.88
+  },
+  {
+    "sku": "30204100079",
+    "name": "VASE 17-Large",
+    "length": 22.5,
+    "width": 22.5,
+    "height": 28.0,
+    "weightKg": 4.165
+  },
+  {
+    "sku": "30204100083",
+    "name": "VASE 18-Small",
+    "length": 22.0,
+    "width": 22.0,
+    "height": 30.0,
+    "weightKg": 3.055
+  },
+  {
+    "sku": "30204100082",
+    "name": "VASE 19-MEDIUM",
+    "length": 23.0,
+    "width": 18.0,
+    "height": 42.0,
+    "weightKg": 3.035
+  },
+  {
+    "sku": "30204100078",
+    "name": "VASE 20-SMALL",
+    "length": 19.0,
+    "width": 13.0,
+    "height": 37.0,
+    "weightKg": 2.08
+  },
+  {
+    "sku": "30204100025",
+    "name": "VASE 23",
+    "length": 56.0,
+    "width": 51.0,
+    "height": 40.0,
+    "weightKg": 7.915
+  },
+  {
+    "sku": "30204100024",
+    "name": "VASE 24-Large",
+    "length": 23.0,
+    "width": 23.0,
+    "height": 37.0,
+    "weightKg": 3.465
+  },
+  {
+    "sku": "30204100022",
+    "name": "VASE 25-Small",
+    "length": 24.0,
+    "width": 24.0,
+    "height": 32.0,
+    "weightKg": 2.83
+  },
+  {
+    "sku": "30204100016",
+    "name": "VASE 26-Small",
+    "length": 44.0,
+    "width": 38.0,
+    "height": 22.0,
+    "weightKg": 3.375
+  },
+  {
+    "sku": "30204100026",
+    "name": "VASE 27-Large",
+    "length": 50.0,
+    "width": 50.0,
+    "height": 20.0,
+    "weightKg": 4.74
+  },
+  {
+    "sku": "30204100028",
+    "name": "VASE 28",
+    "length": 47.0,
+    "width": 47.0,
+    "height": 22.0,
+    "weightKg": 3.495
+  },
+  {
+    "sku": "30204100029",
+    "name": "VASE 29",
+    "length": 45.0,
+    "width": 25.0,
+    "height": 18.0,
+    "weightKg": 1.97
+  },
+  {
+    "sku": "30204100021",
+    "name": "VASE 31-Large",
+    "length": 26.0,
+    "width": 30.0,
+    "height": 44.0,
+    "weightKg": 6.83
+  },
+  {
+    "sku": "30204100017",
+    "name": "VASE 32-Small",
+    "length": 29.0,
+    "width": 15.0,
+    "height": 31.0,
+    "weightKg": 4.965
+  },
+  {
+    "sku": "30204100012",
+    "name": "VASE 32",
+    "length": 46.0,
+    "width": 44.0,
+    "height": 16.0,
+    "weightKg": 3.275
+  },
+  {
+    "sku": "",
+    "name": "VASE 33",
+    "length": 46.0,
+    "width": 47.0,
+    "height": 27.0,
+    "weightKg": 5.305
+  },
+  {
+    "sku": "30204100029",
+    "name": "WATER JUG-34",
+    "length": 29.0,
+    "width": 25.0,
+    "height": 21.0,
+    "weightKg": 1.05
+  },
+  {
+    "sku": "30204100090",
+    "name": "VASE 35 - LARGE",
+    "length": 24.0,
+    "width": 23.0,
+    "height": 40.0,
+    "weightKg": 2.44
+  },
+  {
+    "sku": "30204100093",
+    "name": "VASE 36 - SMALL",
+    "length": 21.0,
+    "width": 20.0,
+    "height": 28.0,
+    "weightKg": 1.63
+  },
+  {
+    "sku": "30204100089",
+    "name": "VASE 37 - SCULPTURE",
+    "length": 47.5,
+    "width": 34.5,
+    "height": 31.0,
+    "weightKg": 4.915
+  },
+  {
+    "sku": "30204100096",
+    "name": "VASE 38 - LARGE",
+    "length": 40.0,
+    "width": 26.5,
+    "height": 28.0,
+    "weightKg": 2.275
+  },
+  {
+    "sku": "30204100092",
+    "name": "VASE 39 - SMALL",
+    "length": 29.0,
+    "width": 25.0,
+    "height": 21.5,
+    "weightKg": 1.45
+  },
+  {
+    "sku": "30204100095",
+    "name": "VASE 40 - LARGE",
+    "length": 39.0,
+    "width": 21.0,
+    "height": 21.0,
+    "weightKg": 7.765
+  },
+  {
+    "sku": "30204100081",
+    "name": "VASE 41 - SMALL",
+    "length": 29.0,
+    "width": 22.0,
+    "height": 22.0,
+    "weightKg": 6.325
+  },
+  {
+    "sku": "30204100077",
+    "name": "VASE 42 - LARGE",
+    "length": 47.0,
+    "width": 21.0,
+    "height": 21.0,
+    "weightKg": 8.66
+  },
+  {
+    "sku": "30204100091",
+    "name": "VASE 43 - SMALL",
+    "length": 41.0,
+    "width": 22.0,
+    "height": 22.0,
+    "weightKg": 5.58
+  },
+  {
+    "sku": "30204100084",
+    "name": "VASE 44 - LARGE",
+    "length": 42.0,
+    "width": 22.0,
+    "height": 22.0,
+    "weightKg": 6.025
+  },
+  {
+    "sku": "30204100080",
+    "name": "VASE 45 - SMALL",
+    "length": 31.0,
+    "width": 21.0,
+    "height": 17.0,
+    "weightKg": 3.58
+  },
+  {
+    "sku": "30204100094",
+    "name": "VASE 46 - FRUIT PLATE",
+    "length": 40.0,
+    "width": 32.0,
+    "height": 21.0,
+    "weightKg": 6.215
+  },
+  {
+    "sku": "30204100088",
+    "name": "VASE 47 - LARGE",
+    "length": 40.0,
+    "width": 22.0,
+    "height": 21.0,
+    "weightKg": 6.685
+  },
+  {
+    "sku": "30204100085",
+    "name": "VASE 48 -SMALL",
+    "length": 35.0,
+    "width": 21.0,
+    "height": 16.0,
+    "weightKg": 4.11
+  },
+  {
+    "sku": "30204100097",
+    "name": "VASE 49 - LARGE",
+    "length": 43.0,
+    "width": 22.0,
+    "height": 21.0,
+    "weightKg": 6.93
+  },
+  {
+    "sku": "30204100086",
+    "name": "VASE 50 - SMALL",
+    "length": 29.0,
+    "width": 20.0,
+    "height": 16.0,
+    "weightKg": 6.01
+  },
+  {
+    "sku": "30204100001",
+    "name": "Handmade Candle Glass-Big",
+    "length": 26.0,
+    "width": 26.0,
+    "height": 34.0,
+    "weightKg": 5.115
+  },
+  {
+    "sku": "30204100002",
+    "name": "Handmade Candle Glass-Small",
+    "length": 22.0,
+    "width": 22.0,
+    "height": 25.0,
+    "weightKg": 3.505
+  },
+  {
+    "sku": "",
+    "name": "VASE JAR SCENTED CANDLE-LARGE",
+    "length": 30.0,
+    "width": 31.0,
+    "height": 38.0,
+    "weightKg": 13.69
+  },
+  {
+    "sku": "",
+    "name": "VASE JAR SCENTED CANDLE-MEDIUM",
+    "length": 27.0,
+    "width": 26.0,
+    "height": 30.0,
+    "weightKg": 6.455
+  },
+  {
+    "sku": "",
+    "name": "VASE JAR SCENTED CANDLE-SMALL",
+    "length": 22.0,
+    "width": 22.0,
+    "height": 22.0,
+    "weightKg": 2.61
+  },
+  {
+    "sku": "",
+    "name": "Bouquet Mint Grey and White Artificial Flowers (15 Pcs) Stem",
+    "length": 37.0,
+    "width": 32.0,
+    "height": 48.0,
+    "weightKg": 0.955
+  },
+  {
+    "sku": "30204100048",
+    "name": "TABLE LAMP - 01",
+    "length": 40.0,
+    "width": 41.0,
+    "height": 59.0,
+    "weightKg": 3.2
+  },
+  {
+    "sku": "30204100049",
+    "name": "TABLE LAMP -02",
+    "length": 47.0,
+    "width": 47.0,
+    "height": 46.0,
+    "weightKg": 2.06
+  },
+  {
+    "sku": "30204100050",
+    "name": "TABLE LAMP -02 ( LAMPSHADE ONLY)",
+    "length": 54.0,
+    "width": 42.0,
+    "height": 42.0,
+    "weightKg": 2.705
+  },
+  {
+    "sku": "30204100051",
+    "name": "TABLE LAMP - 03",
+    "length": 64.5,
+    "width": 46.0,
+    "height": 46.5,
+    "weightKg": 4.015
+  },
+  {
+    "sku": "",
+    "name": "TABLE LAMP - 04",
+    "length": 55.0,
+    "width": 32.0,
+    "height": 32.0,
+    "weightKg": 5.565
+  },
+  {
+    "sku": "",
+    "name": "TABLE LAMP - 04 ( LMAPSHADE ONLY",
+    "length": 47.0,
+    "width": 47.0,
+    "height": 47.0,
+    "weightKg": 1.595
+  },
+  {
+    "sku": "",
+    "name": "TABLE LAMP- 05 LAMPSHADE ONLY",
+    "length": 47.0,
+    "width": 47.0,
+    "height": 47.0,
+    "weightKg": 2.045
+  },
+  {
+    "sku": "",
+    "name": "TABLE LAMP- 06",
+    "length": 40.0,
+    "width": 40.0,
+    "height": 60.0,
+    "weightKg": 9.63
+  },
+  {
+    "sku": "30204100104",
+    "name": "BRTL3205/TABLE LAMP-07",
+    "length": 58.0,
+    "width": 28.0,
+    "height": 27.0,
+    "weightKg": 8.575
+  },
+  {
+    "sku": "30204100098",
+    "name": "BRTL3205-SD/TABLE LAMP-07 LAMPSHADE ONLY",
+    "length": 40.0,
+    "width": 40.0,
+    "height": 30.0,
+    "weightKg": 1.535
+  },
+  {
+    "sku": "30204100105",
+    "name": "BRTL3203/TABLE LAMP-08",
+    "length": 57.0,
+    "width": 28.0,
+    "height": 28.0,
+    "weightKg": 5.98
+  },
+  {
+    "sku": "30204100102",
+    "name": "BRTL3203-SD",
+    "length": 40.0,
+    "width": 40.0,
+    "height": 30.0,
+    "weightKg": 1.55
+  },
+  {
+    "sku": "30204100106",
+    "name": "BRTL3215/TABLE LAMP-09",
+    "length": 67.0,
+    "width": 29.0,
+    "height": 29.0,
+    "weightKg": 12.39
+  },
+  {
+    "sku": "30204100100",
+    "name": "BRTL3215-SD",
+    "length": 44.0,
+    "width": 44.0,
+    "height": 29.0,
+    "weightKg": 1.4
+  },
+  {
+    "sku": "30204100107",
+    "name": "TL1121/TABLE LAMP-10",
+    "length": 60.0,
+    "width": 30.0,
+    "height": 26.0,
+    "weightKg": 11.37
+  },
+  {
+    "sku": "30204100108",
+    "name": "TL1121-SD/TABLE LAMPSHADE ONLY-10",
+    "length": 41.0,
+    "width": 32.0,
+    "height": 36.0,
+    "weightKg": 1.515
+  },
+  {
+    "sku": "30204100099",
+    "name": "BRTL3149/TABLE LAMP-11",
+    "length": 69.0,
+    "width": 42.0,
+    "height": 37.0,
+    "weightKg": 10.33
+  },
+  {
+    "sku": "30204100109",
+    "name": "BRTL3149-SD GRAY GREEN/LAMPSHADE ONLY-TABLE LAMP-11",
+    "length": 49.0,
+    "width": 49.0,
+    "height": 35.0,
+    "weightKg": 1.93
+  },
+  {
+    "sku": "30204100103",
+    "name": "BRTL3061/TABLE LAMP-12",
+    "length": 63.0,
+    "width": 30.0,
+    "height": 30.0,
+    "weightKg": 9.805
+  },
+  {
+    "sku": "30204100101",
+    "name": "BRTL3061-SD",
+    "length": 43.0,
+    "width": 43.0,
+    "height": 32.0,
+    "weightKg": 1.99
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-01 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-01 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-01 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-01 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-02 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-02 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-02 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-02 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-03 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-03 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-03 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-03 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-04 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-04 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-04 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-04 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-05 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-05 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-05 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-05 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-06 LUSAIL (50 x 60cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-06 LUSAIL (60 x 70cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-06 LUSAIL (70 x 80cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-06 LUSAIL (90 x 100cm)",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-01 FORESTA (50 x 60cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-01 FORESTA (60 x 70cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-01 FORESTA (70 x 80cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-01 FORESTA (90 x 100cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-02 FORESTA (50 x 60cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-02 FORESTA (60 x 70cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-02 FORESTA (70 x 80cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-02 FORESTA (90 x 100cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-03 FORESTA (50 x 60cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-03 FORESTA (60 x 70cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-03 FORESTA (70 x 80cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-03 FORESTA (90 x 100cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-04 FORESTA (50 x 60cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-04 FORESTA (60 x 70cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-04 FORESTA (70 x 80cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-04 FORESTA (90 x 100cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03- FORESTA SET (50 x 60cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03- FORESTA SET (60 x 70cm)",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-01 LONDRA (50 x 60cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-01 LONDRA (60 x 70cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-01 LONDRA (70 x 80cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-01 LONDRA (90 x 100cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-02 LONDRA (50 x 60cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-02 LONDRA (60 x 70cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-02 LONDRA (70 x 80cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-02 LONDRA (90 x 100cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-03 LONDRA (50 x 60cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-03 LONDRA (60 x 70cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-03 LONDRA (70 x 80cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-03 LONDRA (90 x 100cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-04 LONDRA (50 x 60cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-04 LONDRA (60 x 70cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-04 LONDRA (70 x 80cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-04 LONDRA (90 x 100cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK SET 04- LONDRA (50 x 60cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK SET 04- LONDRA (60 x 70cm)",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Large-01 (M 25X20)",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 29.0,
+    "weightKg": 0.715
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Large-01 (L 32x27)",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 29.0,
+    "weightKg": 0.715
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05- Small-02 (S 22x18)",
+    "length": 36.0,
+    "width": 13.0,
+    "height": 25.0,
+    "weightKg": 0.38
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05- Small-02 (M 25X20)",
+    "length": 36.0,
+    "width": 13.0,
+    "height": 25.0,
+    "weightKg": 0.38
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05- Small-02 (L 32x27)",
+    "length": 36.0,
+    "width": 13.0,
+    "height": 25.0,
+    "weightKg": 0.38
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Medium-03 (S 22x18)",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 25.0,
+    "weightKg": 0.46
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Medium-03 (M 25X20)",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 25.0,
+    "weightKg": 0.46
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05-Large Horse-04 (L 32x27\n)",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 30.0,
+    "weightKg": 0.795
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 01 (50 x 60cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 01 (60 x 70cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 01 (70 x 80cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 01 (90 x 110cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 02 (50 x 60cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 02 (60 x 70cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 02 (70 x 80cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 02 (90 x 110cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 03 (50 x 60cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 03 (60 x 70cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 03 (70 x 80cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 03 (90 x 110cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 04 (50 x 60cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 04 (60 x 70cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 04 (70 x 80cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA 04 (90 x 110cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA SET (50 x 60cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-15-ALOLA SET (60 x 70cm)",
+    "length": 48.0,
+    "width": 5.0,
+    "height": 43.0,
+    "weightKg": 1.21
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 01 (50 x 60cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 01 (60 x 70cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 01 (70 x 80cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 01 (90 x 110cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 02 (50 x 60cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 02 (60 x 70cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 02 (70 x 80cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 02 (90 x 110cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 03 (50 x 60cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 03 (60 x 70cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 03 (70 x 80cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 03 (90 x 110cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 04 (50 x 60cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 04 (60 x 70cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 04 (70 x 80cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT 04 (90 x 110cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT SET (50 x 60cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-16-PORTRAIT SET (60 x 70cm)",
+    "length": 44.0,
+    "width": 7.0,
+    "height": 49.0,
+    "weightKg": 1.245
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA SET (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA SET (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA SET (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA SET (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (80 x 80cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (90 x 90cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04 (100 x 100cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN SET (55 x 55cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN SET (60 x 60cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN SET (65 x 65cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN SET (70 x 70cm)",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (55 x 55cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (60 x 60cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (65 x 65cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (70 x 70cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (80 x 80cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (90 x 90cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01 (100 x 100cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (55 x 55cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (60 x 60cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (65 x 65cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (70 x 70cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (80 x 80cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (90 x 90cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02 (100 x 100cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (55 x 55cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (60 x 60cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (65 x 65cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (70 x 70cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (80 x 80cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (90 x 90cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03 (100 x 100cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (55 x 55cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (60 x 60cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (65 x 65cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (70 x 70cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (80 x 80cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (90 x 90cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04 (100 x 100cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA SET (55 x 55cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA SET (60 x 60cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA SET (65 x 65cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA SET (70 x 70cm)",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-01 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-02 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-03 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-04 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-05 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02-06 LUSAIL",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 02- LUSAIL SET",
+    "length": 59.0,
+    "width": 6.0,
+    "height": 51.0,
+    "weightKg": 3.115
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-01 FORESTA",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-02 FORESTA",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-03 FORESTA",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03-04 FORESTA",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 03- FORESTA SET",
+    "length": 52.0,
+    "width": 7.0,
+    "height": 62.0,
+    "weightKg": 3.745
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-01 LONDRA",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-02 LONDRA",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-03 LONDRA",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK 04-04 LONDRA",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK SET 04- LONDRA",
+    "length": 70.0,
+    "width": 3.0,
+    "height": 62.0,
+    "weightKg": 3.485
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Large-01",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 29.0,
+    "weightKg": 0.715
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05- Small-02",
+    "length": 36.0,
+    "width": 13.0,
+    "height": 25.0,
+    "weightKg": 0.38
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05 Medium-03",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 25.0,
+    "weightKg": 0.46
+  },
+  {
+    "sku": "",
+    "name": "Artwork 05-Large Horse-04",
+    "length": 36.0,
+    "width": 12.0,
+    "height": 30.0,
+    "weightKg": 0.795
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 01",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 02",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 03",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA 04",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-18-SAHARA SET",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.65
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 01",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 02",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 03",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN 04",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-19-JINAN SET",
+    "length": 62.0,
+    "width": 5.0,
+    "height": 62.0,
+    "weightKg": 3.56
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 01",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 02",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 03",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA 04",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "",
+    "name": "ARTWORK-20-MAYDA SET",
+    "length": 63.0,
+    "width": 6.0,
+    "height": 62.0,
+    "weightKg": 4.32
+  },
+  {
+    "sku": "30204100076",
+    "name": "LEATHER TRAY-01-WOOD GREY",
+    "length": 44.0,
+    "width": 8.0,
+    "height": 33.0,
+    "weightKg": 1.59
+  },
+  {
+    "sku": "30204100035",
+    "name": "LEATHER TRAY-02-BRASS BEIGE",
+    "length": 45.0,
+    "width": 8.0,
+    "height": 31.0,
+    "weightKg": 1.745
+  },
+  {
+    "sku": "30204100073",
+    "name": "LEATHER TRAY-02-BRASS GREY",
+    "length": 45.0,
+    "width": 8.0,
+    "height": 31.0,
+    "weightKg": 1.745
+  },
+  {
+    "sku": "30204100059",
+    "name": "LEATHER TISSUE BOX 01 GREY",
+    "length": 19.0,
+    "width": 19.0,
+    "height": 19.0,
+    "weightKg": 1.2
+  },
+  {
+    "sku": "30204100060",
+    "name": "LEATHER STORAGE BOX 01 (Large,Grey) GREY",
+    "length": 33.0,
+    "width": 9.0,
+    "height": 21.0,
+    "weightKg": 0.975
+  },
+  {
+    "sku": "30204100061",
+    "name": "LEATHER STORAGE BOX 01 (Small,Grey)",
+    "length": 28.0,
+    "width": 10.0,
+    "height": 19.0,
+    "weightKg": 0.77
+  },
+  {
+    "sku": "",
+    "name": "LEATHER PHOTO FRAME-02 LARGE BLUSH BEIGE",
+    "length": 34.0,
+    "width": 6.0,
+    "height": 29.0,
+    "weightKg": 0.935
+  },
+  {
+    "sku": "",
+    "name": "LEATHER PHOTO FRAME-02 SMALL BLUSH BEIGE",
+    "length": 29.0,
+    "width": 5.0,
+    "height": 24.0,
+    "weightKg": 0.705
+  },
+  {
+    "sku": "30204100043",
+    "name": "DECORATIVE BOOK-01 SMALL GREY",
+    "length": 30.0,
+    "width": 23.0,
+    "height": 4.0,
+    "weightKg": 1.255
+  },
+  {
+    "sku": "30204100045",
+    "name": "DECORATIVE BOOK-01 LARGE WHITE",
+    "length": 38.0,
+    "width": 24.0,
+    "height": 5.0,
+    "weightKg": 1.665
+  },
+  {
+    "sku": "30204100066",
+    "name": "Photo Frame (Small-Grey)",
+    "length": 29.0,
+    "width": 5.0,
+    "height": 25.0,
+    "weightKg": 1.0
+  },
+  {
+    "sku": "30204100065",
+    "name": "Photo Frame (Large- Grey) GREY",
+    "length": 34.0,
+    "width": 5.0,
+    "height": 29.0,
+    "weightKg": 1.29
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 55X55CM/with imported trims",
+    "length": 53.0,
+    "width": 53.0,
+    "height": 17.0,
+    "weightKg": 1.795
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 45X45CM/with imported trims",
+    "length": 44.0,
+    "width": 44.0,
+    "height": 17.0,
+    "weightKg": 1.53
+  },
+  {
+    "sku": "",
+    "name": "CUSHIONS WITH FEATHER SIZE 35X55CM/with imported trims",
+    "length": 60.0,
+    "width": 34.0,
+    "height": 14.0,
+    "weightKg": 1.065
+  }
+]
