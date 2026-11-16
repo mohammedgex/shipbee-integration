@@ -668,7 +668,7 @@
                 <section id="view-integration" class="view">
                     <div class="panel">
                         <h2>سجلات Shopify ↔ ShipBee</h2>
-                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر DHL التقديري بطريقة مبسطة.</p>
+                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر Qatar Post بطريقة مبسطة.</p>
                         <div class="toolbar">
                             <button class="btn" onclick="loadLogs()">تحديث</button>
                             <button class="btn danger" onclick="clearLogs()">مسح السجلات المحلية</button>
@@ -682,7 +682,7 @@
                                         <th>العميل</th>
                                         <th>الدولة</th>
                                         <th>إجمالي الطلب</th>
-                                        <th>شحن DHL التقديري</th>
+                                        <th>شحن Qatar Post</th>
                                         <th>الحالة</th>
                                         <th>التتبع</th>
                                     </tr>
@@ -748,13 +748,13 @@
                             <div><label for="price-width">العرض (cm)</label><input id="price-width" type="number" min="1" value="30" required></div>
                             <div><label for="price-height">الارتفاع (cm)</label><input id="price-height" type="number" min="1" value="20" required></div>
                             <div><label for="price-carrier">شركة الشحن</label><select id="price-carrier">
-                                <option value="">كل الشركات</option><option>DHL</option><option>Aramex</option>
+                                <option value="">كل الشركات</option><option>Aramex</option>
                                 <option>Qatar Post</option><option>SMSA GCC Land Express</option><option>SMSA International Air Express</option>
                             </select></div>
                             <div><label for="price-incoterm">Incoterm</label><select id="price-incoterm">
                                 <option value="DDU">DDU — المستلم يدفع الرسوم</option><option value="DDP">DDP — المرسل يدفع الرسوم</option>
                             </select></div>
-                            <div><label for="price-date">تاريخ الشحن (DHL)</label><input id="price-date" type="date"></div>
+                            <div><label for="price-date">تاريخ الشحن</label><input id="price-date" type="date"></div>
                             <div><label><input id="price-document" type="checkbox" style="width:auto;min-height:0"> مستندات فقط</label></div>
                             <div><label><input id="price-dangerous" type="checkbox" style="width:auto;min-height:0"> مواد خطرة</label></div>
                             <div style="grid-column:1/-1"><label for="price-packages">صناديق متعددة (JSON اختياري، حتى 5)</label>
@@ -926,8 +926,8 @@
                 return {
                     label: error.integrationErrorCode === 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' ?
                         'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)' : error.integrationDiagnostic &&
-                        error.integrationDiagnostic.serviceName === 'ShipBee DHL pricing' ?
-                        'فشل الحصول على سعر DHL من ShipBee' : error.integrationDiagnostic &&
+                        error.integrationDiagnostic.serviceName === 'ShipBee Qatar Post pricing' ?
+                        'فشل الحصول على سعر Qatar Post من ShipBee' : error.integrationDiagnostic &&
                         error.integrationDiagnostic.serviceName === 'ShipBee order creation' ?
                         'فشل إنشاء الطلب لدى ShipBee' : 'تعذر تجهيز الشحنة',
                     style: 'b-failed',
@@ -1151,10 +1151,10 @@
                 `${escapeHtml(packageDetails.actualWeightKg)} كجم فعلي / ${escapeHtml(packageDetails.chargeableWeightKg)} كجم للفوترة` :
                 'غير متوفر';
             const quoteLabel = quote && quote.source === 'shipbee-order-response' ?
-                'سعر DHL من رد ShipBee' : 'سعر DHL التقديري';
+                'سعر Qatar Post من رد ShipBee' : 'سعر Qatar Post';
             const quoteNote = quote && quote.source === 'shipbee-order-response' ?
                 'السعر مأخوذ من totalCost في رد إنشاء الطلب من ShipBee، وليس من واجهة التسعير.' :
-                'سعر DHL تقديري من عرض السعر، وليس فاتورة الشحن النهائية.';
+                'السعر من عرض Qatar Post وليس فاتورة الشحن النهائية.';
             let note = '';
             if (status.log && status.log.error) note = status.log.error;
             else if (status.log && status.log.reason) note = status.log.reason;
@@ -1174,8 +1174,8 @@
                 const quoteNote = webhookRejection ?
                     `معلومة تسعير منفصلة؛ الطلب لم يصل إلى ShipBee: ${shippingQuoteError}` :
                     orderWasSubmitted ?
-                        `تم إرسال الطلب على MONTHLY_BILL دون عرض DHL صالح: ${shippingQuoteError}` :
-                        `تعذر الحصول على عرض DHL: ${shippingQuoteError}`;
+                        `تم إرسال الطلب على MONTHLY_BILL دون عرض Qatar Post صالح: ${shippingQuoteError}` :
+                        `تعذر الحصول على عرض Qatar Post: ${shippingQuoteError}`;
                 note = [note, quoteNote].filter(Boolean).join(' — ');
             }
             const supportReport = getShipBeeSupportReport(logs, responseLog, errorLog);
@@ -1183,13 +1183,13 @@
             document.getElementById('log-details').innerHTML = `
                 <div class="toolbar" style="justify-content:space-between;align-items:center">
                     <h3 class="order-details-title">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
-                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر DHL</button>
+                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر Qatar Post</button>
                 </div>
                 <div class="order-summary">
                     <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
                     <div class="order-card"><strong>مستلم الشحنة</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
                     <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
-                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'DHL')}</span></div>
+                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'Qatar Post')}</span></div>
                     <div class="order-card"><strong>${escapeHtml(quoteLabel)}</strong><span>${escapeHtml(quoteAmount)}</span></div>
                     <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
                     <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
@@ -1265,7 +1265,7 @@
 
         async function refreshOrderDetails(orderId) {
             const message = document.getElementById('order-refresh-message');
-            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض DHL...';
+            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض Qatar Post...';
             try {
                 const details = await apiRequest(
                     `/api/shopify/orders/${encodeURIComponent(orderId)}/details`

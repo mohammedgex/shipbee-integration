@@ -46,7 +46,9 @@ const PRODUCT_DIMENSION_RECORDS = Array.isArray(loadedProductDimensions) ?
     (loadedProductDimensions && Array.isArray(loadedProductDimensions.products) ?
         loadedProductDimensions.products : []);
 const VOLUMETRIC_DIVISOR = 5000;
-const SHIPPING_COMPANY = 'DHL';
+const SHIPPING_COMPANY = 'Qatar Post';
+const SHIPPING_COMPANY_CODE = 'QATAR_POST';
+const SHIPBEE_SITE_ID = process.env.SHIPBEE_SITE_ID || 'express-staging';
 const CARRIER_RATE_CURRENCY = 'QAR';
 const PLANNED_SHIPPING_DAYS_AHEAD = 6;
 
@@ -237,12 +239,13 @@ function getEstimatedPackageDimensions(weightKg) {
     return { length: side, width: side, height: side };
 }
 
-function calculateCarrierRates(rate) {
+async function calculateCarrierRates(rate) {
     if (!rate || typeof rate !== 'object' ||
         !rate.origin || typeof rate.origin !== 'object' ||
         !rate.destination || typeof rate.destination !== 'object' ||
         !Array.isArray(rate.items) || !rate.items.length ||
         !(rate.destination.country || rate.destination.country_code) ||
+        !rate.destination.city ||
         String(rate.currency || '').toUpperCase() !== CARRIER_RATE_CURRENCY) {
         return [];
     }
@@ -280,22 +283,44 @@ function calculateCarrierRates(rate) {
     const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg);
     if (!Number.isFinite(chargeableWeightKg) || chargeableWeightKg <= 0) return [];
 
-    const minDeliveryDate = new Date();
-    minDeliveryDate.setUTCDate(minDeliveryDate.getUTCDate() + 3);
-    const maxDeliveryDate = new Date();
-    maxDeliveryDate.setUTCDate(maxDeliveryDate.getUTCDate() + 7);
-    const rates = [];
+    const destinationCountry = rate.destination.country || rate.destination.country_code;
+    const countryName = /^[A-Z]{2}$/i.test(destinationCountry) ?
+        new Intl.DisplayNames(['en'], { type: 'region' }).of(destinationCountry.toUpperCase()) :
+        destinationCountry;
+    if (!countryName) return [];
+    const destinationZip = rate.destination.postal_code || rate.destination.zip;
+    if (countryName !== 'Qatar' && !destinationZip) {
+        throw new Error('Qatar Post requires a destination postal code outside Qatar');
+    }
 
-    rates.push({
-        service_name: SHIPPING_COMPANY,
-        service_code: 'DHL',
-        total_price: Math.round((120 + (chargeableWeightKg * 35)) * 100),
-        currency: CARRIER_RATE_CURRENCY,
-        min_delivery_date: minDeliveryDate.toISOString(),
-        max_delivery_date: maxDeliveryDate.toISOString()
+    const quote = await getShippingQuote({
+        country: countryName,
+        city: rate.destination.city,
+        zip: destinationZip
+    }, {
+        chargeableWeightKg,
+        length,
+        width: maxWidth,
+        height: maxHeight
     });
 
-    return rates;
+    const result = {
+        service_name: SHIPPING_COMPANY,
+        service_code: SHIPPING_COMPANY_CODE,
+        total_price: Math.round(Number(quote.totalCost) * 100),
+        currency: quote.currency || CARRIER_RATE_CURRENCY
+    };
+    const deliveryDays = String(quote.estimatedDeliveryDays || '').match(/\d+/g) || [];
+    if (deliveryDays.length) {
+        const minDeliveryDate = new Date();
+        minDeliveryDate.setUTCDate(minDeliveryDate.getUTCDate() + Number(deliveryDays[0]));
+        const maxDeliveryDate = new Date();
+        maxDeliveryDate.setUTCDate(maxDeliveryDate.getUTCDate() +
+            Number(deliveryDays[1] || deliveryDays[0]));
+        result.min_delivery_date = minDeliveryDate.toISOString();
+        result.max_delivery_date = maxDeliveryDate.toISOString();
+    }
+    return [result];
 }
 
 // ✅ بيانات Mofage الحقيقية
@@ -617,7 +642,7 @@ async function getShippingQuote(address, packageDetails) {
     } catch (error) {
         const requestError = new Error(describeAxiosError(error, 'ShipBee GET /api/pricing/calculate'));
         requestError.integrationDiagnostic = {
-            serviceName: 'ShipBee DHL pricing',
+            serviceName: 'ShipBee Qatar Post pricing',
             endpoint: '/api/pricing/calculate',
             httpStatus: error.response && error.response.status || null,
             requestId: error.response && error.response.headers &&
@@ -636,7 +661,7 @@ async function getShippingQuote(address, packageDetails) {
     const sortedDays = days
         .filter(day => day.date >= today)
         .sort((left, right) => left.date.localeCompare(right.date));
-    const dhlQuotes = [];
+    const carrierQuotes = [];
     for (const day of sortedDays) {
         for (const carrier of day.carriers || []) {
             if (carrier.carrier !== SHIPPING_COMPANY) continue;
@@ -644,20 +669,20 @@ async function getShippingQuote(address, packageDetails) {
             if (Number.isFinite(totalCost) && totalCost > 0) {
                 return { ...carrier, quotedDate: day.date };
             }
-            dhlQuotes.push({ date: day.date, totalCost: carrier.totalCost });
+            carrierQuotes.push({ date: day.date, totalCost: carrier.totalCost });
         }
     }
 
-    const reason = dhlQuotes.length ?
-        `ShipBee أعاد سعر DHL غير صالح: ${JSON.stringify(dhlQuotes)}` :
+    const reason = carrierQuotes.length ?
+        `ShipBee أعاد سعر ${SHIPPING_COMPANY} غير صالح: ${JSON.stringify(carrierQuotes)}` :
         `ShipBee لم يُرجع عرض ${SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`;
     const quoteError = new Error(reason);
     quoteError.integrationDiagnostic = {
-        serviceName: 'ShipBee DHL pricing',
+        serviceName: 'ShipBee Qatar Post pricing',
         endpoint: '/api/pricing/calculate',
         request: params,
         responseData: response.data,
-        invalidQuotes: dhlQuotes
+        invalidQuotes: carrierQuotes
     };
     throw quoteError;
 }
@@ -846,7 +871,7 @@ async function sendToShipBee(shopifyOrder) {
             netValue: getLineItemWeightKg(item),
             grossValue: getLineItemWeightKg(item)
         },
-        manufacturerCountry: 'CHN'
+        manufacturerCountry: 'China'
     }));
     const paymentMethod = 'MONTHLY_BILL';
     let shippingQuote = null;
@@ -858,7 +883,7 @@ async function sendToShipBee(shopifyOrder) {
         } catch (error) {
             shippingQuoteError = error.message;
             shippingQuoteDiagnostic = error.integrationDiagnostic || null;
-            console.warn('[shipbee-order] DHL quote unavailable; continuing with order', {
+            console.warn('[shipbee-order] Qatar Post quote unavailable; continuing with order', {
                 orderId: shopifyOrder.id,
                 orderNumber: shopifyOrder.order_number,
                 paymentMethod,
@@ -876,6 +901,7 @@ async function sendToShipBee(shopifyOrder) {
     const payload = {
         serviceSubcategory: 'International',
         paymentMethod,
+        siteId: SHIPBEE_SITE_ID,
         senderName: SENDER.name,
         senderPhoneNumber: SENDER.phone,
         senderEmail: SENDER.email,
@@ -893,7 +919,7 @@ async function sendToShipBee(shopifyOrder) {
             incoterm: 'DDU',
             purpose: 'Sale',
             plannedShippingDateAndTime: getPlannedShippingDate(),
-            pickupRequested: false,
+            pickupRequested: true,
             lineItems: customsLineItems
         },
         stops: [{
@@ -953,7 +979,7 @@ async function sendToShipBee(shopifyOrder) {
             currency: CARRIER_RATE_CURRENCY,
             source: 'shipbee-order-response'
         };
-        console.info('[shipbee-order] Captured DHL price from ShipBee order response', {
+        console.info('[shipbee-order] Captured Qatar Post price from ShipBee order response', {
             orderId: shopifyOrder.id,
             orderNo: createdOrder.orderNo,
             totalCost: createdOrder.totalCost,
@@ -986,11 +1012,11 @@ async function sendToShipBee(shopifyOrder) {
 // ==========================================
 // 7. الـ Webhook الرئيسي
 // ==========================================
-app.post('/api/shopify/calculate-shipping', (req, res) => {
+app.post('/api/shopify/calculate-shipping', async (req, res) => {
     const startedAt = Date.now();
     try {
         const rate = req.body && req.body.rate;
-        const rates = calculateCarrierRates(rate);
+        const rates = await calculateCarrierRates(rate);
         const log = {
             itemCount: rate && Array.isArray(rate.items) ? rate.items.length : 0,
             rateCount: rates.length,
@@ -1008,6 +1034,7 @@ app.post('/api/shopify/calculate-shipping', (req, res) => {
     } catch (error) {
         console.error('[shopify-carrier-rates] calculation failed', {
             message: error.message,
+            diagnostic: error.integrationDiagnostic || null,
             durationMs: Date.now() - startedAt
         });
         return res.status(200).json({ rates: [] });
