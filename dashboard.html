@@ -969,9 +969,26 @@
             ]));
         }
 
+        function redactShipBeeRequest(value, key) {
+            if (key && /phone|email|name|token|secret|authorization|street|building|landmark|apartment|floor|coordinate|address1|address2/i.test(key)) {
+                return '[محذوف للخصوصية]';
+            }
+            if (Array.isArray(value)) {
+                return value.map(item => redactShipBeeRequest(item, ''));
+            }
+            if (!value || typeof value !== 'object') return value;
+            return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
+                childKey,
+                redactShipBeeRequest(childValue, childKey)
+            ]));
+        }
+
         function getShipBeeSupportReport(logs, responseLog, errorLog) {
             const response = responseLog && responseLog.shipbeeResponse ||
                 errorLog && errorLog.shipbeeResponse || null;
+            const request = responseLog && responseLog.shipbeePayload ||
+                errorLog && errorLog.integrationDiagnostic &&
+                errorLog.integrationDiagnostic.request || null;
             const responseShipment = response && response.data && response.data.shipment;
             const paymentMethod = errorLog && errorLog.paymentMethod ||
                 responseLog && responseLog.paymentMethod ||
@@ -1012,6 +1029,7 @@
                     response && response.data && response.data.id || null,
                 shipbeeOrderNo: errorLog && errorLog.shipbeeOrderNo ||
                     response && response.data && response.data.orderNo || null,
+                shipbeeRequest: redactShipBeeRequest(request),
                 shipbeeResponse: redactSupportData(response)
             };
         }
