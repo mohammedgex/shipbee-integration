@@ -831,8 +831,33 @@
             const rejected = logs.find(log =>
                 log.type === 'shipbee_response' && log.shipbeeResponse && !log.shipbeeResponse.success);
             if (rejected) return { label: 'ShipBee لم يقبل الطلب', style: 'b-failed', log: rejected };
+            const monthlyBillWithoutTracking = logs.find(log =>
+                log.type === 'shipbee_response' &&
+                log.shipbeeResponse &&
+                log.shipbeeResponse.success &&
+                log.shipbeePayload &&
+                log.shipbeePayload.paymentMethod === 'MONTHLY_BILL' &&
+                !(log.shipbeeResponse.data &&
+                    log.shipbeeResponse.data.shipment &&
+                    log.shipbeeResponse.data.shipment.trackingNumber));
+            if (monthlyBillWithoutTracking) {
+                return {
+                    label: 'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)',
+                    style: 'b-failed',
+                    log: logs.find(log => log.integrationErrorCode) || monthlyBillWithoutTracking,
+                    missingMonthlyBillTracking: true
+                };
+            }
             const error = logs.find(log => log.status === 'error');
-            if (error) return { label: 'تعذر تجهيز الشحنة', style: 'b-failed', log: error };
+            if (error) {
+                return {
+                    label: error.integrationErrorCode === 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' ?
+                        'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)' :
+                        'تعذر تجهيز الشحنة',
+                    style: 'b-failed',
+                    log: error
+                };
+            }
             if (logs.some(log => log.status === 'duplicate_skipped')) {
                 return { label: 'طلب مكرر — تم تجاهله', style: 'b-info', log: null };
             }
@@ -848,6 +873,58 @@
             return { label: 'قيد المعالجة', style: 'b-pending', log: null };
         }
 
+        function redactSupportData(value, key) {
+            if (key && /address|phone|email|customer|recipient|sender|token|secret|authorization/i.test(key)) {
+                return '[محذوف للخصوصية]';
+            }
+            if (Array.isArray(value)) {
+                return value.map(item => redactSupportData(item, ''));
+            }
+            if (!value || typeof value !== 'object') return value;
+            return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
+                childKey,
+                redactSupportData(childValue, childKey)
+            ]));
+        }
+
+        function getShipBeeSupportReport(logs, responseLog, errorLog) {
+            const response = responseLog && responseLog.shipbeeResponse ||
+                errorLog && errorLog.shipbeeResponse || null;
+            const responseShipment = response && response.data && response.data.shipment;
+            const paymentMethod = errorLog && errorLog.paymentMethod ||
+                responseLog && responseLog.paymentMethod ||
+                responseLog && responseLog.shipbeePayload &&
+                    responseLog.shipbeePayload.paymentMethod || null;
+            const integrationErrorCode = errorLog && errorLog.integrationErrorCode ||
+                (paymentMethod === 'MONTHLY_BILL' && !(
+                    responseShipment && responseShipment.trackingNumber
+                ) ? 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' : null);
+            return {
+                integrationErrorCode,
+                shipbeeErrorCode: errorLog && errorLog.shipbeeErrorCode ||
+                    responseLog && responseLog.shipbeeErrorCode || null,
+                message: errorLog && errorLog.error ||
+                    (integrationErrorCode ?
+                        'ShipBee accepted the MONTHLY_BILL order but returned no tracking number.' :
+                        response && (response.message || response.error && response.error.message)) || null,
+                paymentMethod,
+                carrier: errorLog && errorLog.carrier ||
+                    responseLog && responseLog.shipbeePayload &&
+                        responseLog.shipbeePayload.shipment &&
+                        responseLog.shipbeePayload.shipment.shippingCompany || null,
+                httpStatus: errorLog && errorLog.shipbeeHttpStatus ||
+                    responseLog && responseLog.shipbeeHttpStatus || null,
+                requestId: errorLog && errorLog.shipbeeRequestId ||
+                    responseLog && responseLog.shipbeeRequestId || null,
+                shopifyOrderNumber: (logs.find(log => log.orderNumber) || {}).orderNumber || null,
+                shipbeeOrderId: errorLog && errorLog.shipbeeOrderId ||
+                    response && response.data && response.data.id || null,
+                shipbeeOrderNo: errorLog && errorLog.shipbeeOrderNo ||
+                    response && response.data && response.data.orderNo || null,
+                shipbeeResponse: redactSupportData(response)
+            };
+        }
+
         function renderOrderDetails(orderId) {
             const logs = getOrderLogs(orderId);
             const savedSummary = getOrderSummary(logs);
@@ -858,6 +935,7 @@
                 shippingLines: hydrated.shippingLines
             } : savedSummary;
             const responseLog = logs.find(log => log.type === 'shipbee_response');
+            const errorLog = logs.find(log => log.status === 'error');
             const quote = getShippingQuote(logs) || (hydrated && hydrated.shippingQuote);
             const packageDetails = (responseLog && responseLog.packageDetails) ||
                 (hydrated && hydrated.packageDetails);
@@ -901,8 +979,12 @@
             } else if (status.stale) {
                 note = 'مرّ أكثر من دقيقتين دون تسجيل نتيجة التكامل. حدّث التفاصيل، وراجع سجلات الخادم إذا استمرت الحالة.';
             }
+            if (status.missingMonthlyBillTracking) {
+                note = 'ShipBee قبل الطلب، لكنه لم يُرجع رقم تتبع مع MONTHLY_BILL. اعرض التشخيص وانسخه لإرساله لدعم ShipBee.';
+            }
             if (hydrated && hydrated.packageError) note = hydrated.packageError;
             if (hydrated && hydrated.quoteError) note = [note, hydrated.quoteError].filter(Boolean).join(' — ');
+            const supportReport = getShipBeeSupportReport(logs, responseLog, errorLog);
 
             document.getElementById('log-details').innerHTML = `
                 <div class="toolbar" style="justify-content:space-between;align-items:center">
@@ -923,6 +1005,22 @@
                 </div>
                 <p class="order-note">سعر SMSA تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
                 ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
+                ${responseLog || errorLog ? `
+                    <div class="order-card" style="margin-top:14px">
+                        <div class="toolbar" style="justify-content:space-between;align-items:center">
+                            <strong>تشخيص ShipBee — جاهز لإرساله للدعم</strong>
+                            <button class="btn" type="button" id="copy-shipbee-report">نسخ تقرير المشكلة</button>
+                        </div>
+                        <p class="muted">طريقة الدفع: ${escapeHtml(supportReport.paymentMethod || 'غير متاحة')} |
+                            HTTP: ${escapeHtml(supportReport.httpStatus || 'غير متاح')} |
+                            رمز ShipBee: ${escapeHtml(supportReport.shipbeeErrorCode || 'غير موجود في الرد')} |
+                            رقم الطلب لدى ShipBee: ${escapeHtml(supportReport.shipbeeOrderNo || supportReport.shipbeeOrderId || 'غير متاح')}</p>
+                        <details style="margin-top:10px">
+                            <summary style="cursor:pointer">عرض رد ShipBee ورمز المشكلة</summary>
+                            <pre style="margin-top:10px">${escapeHtml(JSON.stringify(supportReport, null, 2))}</pre>
+                        </details>
+                        <p id="copy-shipbee-report-status" class="muted" style="margin-top:8px"></p>
+                    </div>` : ''}
                 <h3 class="order-details-title" style="margin-top:18px">المنتجات</h3>
                 <div class="table-wrap">
                     <table class="order-items">
@@ -933,6 +1031,34 @@
                 <p id="order-refresh-message" class="muted" style="margin-top:10px"></p>`;
             document.getElementById('refresh-order-details').addEventListener('click', () =>
                 refreshOrderDetails(orderId));
+            const copyReportButton = document.getElementById('copy-shipbee-report');
+            if (copyReportButton) {
+                copyReportButton.addEventListener('click', () =>
+                    copyShipBeeSupportReport(supportReport));
+            }
+        }
+
+        async function copyShipBeeSupportReport(report) {
+            const status = document.getElementById('copy-shipbee-report-status');
+            const text = JSON.stringify(report, null, 2);
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const input = document.createElement('textarea');
+                    input.value = text;
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.select();
+                    const copied = document.execCommand('copy');
+                    input.remove();
+                    if (!copied) throw new Error('المتصفح لم يسمح بالنسخ');
+                }
+                if (status) status.textContent = 'تم نسخ التقرير. راجعه قبل إرساله إلى دعم ShipBee.';
+            } catch (error) {
+                if (status) status.textContent = `تعذر النسخ: ${error.message}`;
+            }
         }
 
         async function refreshOrderDetails(orderId) {

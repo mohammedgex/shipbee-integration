@@ -686,6 +686,36 @@ function describeAxiosError(error, serviceName) {
     return `[${serviceName}] HTTP ${status} ${statusText || ''} — ${bodyStr.substring(0, 400)}`;
 }
 
+function getShipBeeErrorCode(response) {
+    if (!response || typeof response !== 'object') return null;
+    const sources = [
+        response,
+        response.error,
+        response.data,
+        response.data && response.data.error
+    ];
+    for (const source of sources) {
+        if (!source || typeof source !== 'object') continue;
+        const code = source.errorCode || source.error_code || source.code;
+        if (typeof code === 'string' || typeof code === 'number') return String(code);
+    }
+    return null;
+}
+
+function redactShipBeeDiagnostic(value, key) {
+    if (key && /address|phone|email|customer|recipient|sender|token|secret|authorization/i.test(key)) {
+        return '[redacted]';
+    }
+    if (Array.isArray(value)) {
+        return value.map(item => redactShipBeeDiagnostic(item, ''));
+    }
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
+        childKey,
+        redactShipBeeDiagnostic(childValue, childKey)
+    ]));
+}
+
 // ==========================================
 // 6. إرسال ShipBee
 // ==========================================
@@ -780,7 +810,17 @@ async function sendToShipBee(shopifyOrder) {
         throw new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
     }
 
-    return { payload, response: res.data, packageDetails, shippingQuote };
+    return {
+        payload,
+        response: res.data,
+        packageDetails,
+        shippingQuote,
+        shipbeeHttpStatus: res.status,
+        shipbeeRequestId: res.headers['x-request-id'] ||
+            res.headers['request-id'] ||
+            res.headers['x-correlation-id'] ||
+            null
+    };
 }
 
 // ==========================================
@@ -920,7 +960,14 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             }
         }
 
-        const { payload, response, packageDetails, shippingQuote } = await sendToShipBee(order);
+        const {
+            payload,
+            response,
+            packageDetails,
+            shippingQuote,
+            shipbeeHttpStatus,
+            shipbeeRequestId
+        } = await sendToShipBee(order);
 
         await pushLog({
             type: 'shipbee_response',
@@ -928,6 +975,10 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             orderNumber: order.order_number,
             packageDetails,
             shippingQuote,
+            paymentMethod: payload.paymentMethod,
+            shipbeeHttpStatus,
+            shipbeeRequestId,
+            shipbeeErrorCode: getShipBeeErrorCode(response),
             shipbeePayload: payload,
             shipbeeResponse: response,
             status: response.success ? 'shipbee_ok' : 'shipbee_failed'
@@ -942,16 +993,45 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
 
         if (!tracking) {
             const message = 'ShipBee did not return a tracking number for a MONTHLY_BILL shipment';
+            const integrationErrorCode = 'MONTHLY_BILL_TRACKING_NUMBER_MISSING';
             await pushLog({
                 type: 'error',
                 orderId: order.id,
                 orderNumber: order.order_number,
                 shipbeeOrderId: response.data && response.data.id,
                 shipbeeOrderNo: response.data && response.data.orderNo,
+                paymentMethod: payload.paymentMethod,
+                carrier: shipment.shippingCompany || SMSA_SHIPPING_COMPANY,
+                shipbeeHttpStatus,
+                shipbeeRequestId,
+                shipbeeErrorCode: getShipBeeErrorCode(response),
+                integrationErrorCode,
+                shipbeeResponse: response,
                 error: message,
                 status: 'error'
             });
-            return res.status(502).json({ success: false, message });
+            console.error('[shipbee-order] Monthly billing order has no tracking number', {
+                orderId: order.id,
+                orderNumber: order.order_number,
+                shipbeeOrderId: response.data && response.data.id,
+                shipbeeOrderNo: response.data && response.data.orderNo,
+                paymentMethod: payload.paymentMethod,
+                httpStatus: shipbeeHttpStatus,
+                requestId: shipbeeRequestId,
+                errorCode: getShipBeeErrorCode(response),
+                integrationErrorCode,
+                response: redactShipBeeDiagnostic(response)
+            });
+            return res.status(502).json({
+                success: false,
+                message,
+                code: integrationErrorCode,
+                paymentMethod: payload.paymentMethod,
+                shipbeeOrderId: response.data && response.data.id,
+                shipbeeOrderNo: response.data && response.data.orderNo,
+                shipbeeErrorCode: getShipBeeErrorCode(response),
+                shipbeeResponse: response
+            });
         }
 
         try {
