@@ -1088,7 +1088,10 @@
                 data = { message: text };
             }
             if (!response.ok) {
-                throw new Error(data.message || `HTTP ${response.status}`);
+                const error = new Error(data.message || `HTTP ${response.status}`);
+                error.statusCode = response.status;
+                error.responseData = data;
+                throw error;
             }
             return data;
         }
@@ -1099,7 +1102,9 @@
             try {
                 showJson(outputId, await action(new FormData(form)));
             } catch (error) {
-                output.textContent = `خطأ: ${error.message}`;
+                output.textContent = error.responseData ?
+                    `خطأ: HTTP ${error.statusCode}\n${JSON.stringify(error.responseData, null, 2)}` :
+                    `خطأ: ${error.message}`;
             }
         }
 
