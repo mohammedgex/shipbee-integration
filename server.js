@@ -48,7 +48,7 @@ const PRODUCT_DIMENSION_RECORDS = Array.isArray(loadedProductDimensions) ?
 const VOLUMETRIC_DIVISOR = 5000;
 const SHIPPING_COMPANY = 'DHL';
 const CARRIER_RATE_CURRENCY = 'QAR';
-const PLANNED_SHIPPING_DAYS_AHEAD = 3;
+const PLANNED_SHIPPING_DAYS_AHEAD = 6;
 
 function getPlannedShippingDate() {
     const date = new Date(Date.now() + (3 * 60 * 60 * 1000));
@@ -369,9 +369,7 @@ async function releaseOrderSubmissionLock(lock) {
 
     try {
         await kv.eval(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
-            [lock.key],
-            [lock.token]
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", [lock.key], [lock.token]
         );
     } catch (error) {
         console.error('[shopify-order] failed to release submission lock; it will expire automatically', {
@@ -470,9 +468,7 @@ function verifyShopifyWebhook(req) {
         const received = Buffer.from(hmac);
         const expected = Buffer.from(digest);
         return received.length === expected.length &&
-            crypto.timingSafeEqual(received, expected) ?
-            { valid: true, reason: null } :
-            { valid: false, reason: 'توقيع HMAC لا يطابق السر المضبوط؛ تحقق من تطابق Shopify و SHOPIFY_WEBHOOK_SECRET في Vercel' };
+            crypto.timingSafeEqual(received, expected) ? { valid: true, reason: null } : { valid: false, reason: 'توقيع HMAC لا يطابق السر المضبوط؛ تحقق من تطابق Shopify و SHOPIFY_WEBHOOK_SECRET في Vercel' };
     } catch (error) {
         return { valid: false, reason: `تعذر التحقق من توقيع Webhook: ${error.message}` };
     }
@@ -835,27 +831,36 @@ async function sendToShipBee(shopifyOrder) {
             netValue: getLineItemWeightKg(item),
             grossValue: getLineItemWeightKg(item)
         },
-        manufacturerCountry: 'China'
+        manufacturerCountry: 'CHN'
     }));
+    const paymentMethod = 'MONTHLY_BILL';
     let shippingQuote = null;
     let shippingQuoteError = null;
     let shippingQuoteDiagnostic = null;
-    try {
-        shippingQuote = await getShippingQuote(addr, packageDetails);
-    } catch (error) {
-        shippingQuoteError = error.message;
-        shippingQuoteDiagnostic = error.integrationDiagnostic || null;
-        console.warn('[shipbee-order] DHL quote unavailable; continuing with MONTHLY_BILL order', {
+    if (paymentMethod !== 'MONTHLY_BILL') {
+        try {
+            shippingQuote = await getShippingQuote(addr, packageDetails);
+        } catch (error) {
+            shippingQuoteError = error.message;
+            shippingQuoteDiagnostic = error.integrationDiagnostic || null;
+            console.warn('[shipbee-order] DHL quote unavailable; continuing with order', {
+                orderId: shopifyOrder.id,
+                orderNumber: shopifyOrder.order_number,
+                paymentMethod,
+                error: shippingQuoteError,
+                diagnostic: shippingQuoteDiagnostic
+            });
+        }
+    } else {
+        console.info('[shipbee-order] Skipping pricing endpoint for MONTHLY_BILL; using totalCost from ShipBee order response', {
             orderId: shopifyOrder.id,
-            orderNumber: shopifyOrder.order_number,
-            error: shippingQuoteError,
-            diagnostic: shippingQuoteDiagnostic
+            weight: packageDetails.chargeableWeightKg
         });
     }
 
     const payload = {
         serviceSubcategory: 'International',
-        paymentMethod: 'MONTHLY_BILL',
+        paymentMethod,
         senderName: SENDER.name,
         senderPhoneNumber: SENDER.phone,
         senderEmail: SENDER.email,
@@ -923,6 +928,31 @@ async function sendToShipBee(shopifyOrder) {
             shippingQuoteDiagnostic
         };
         throw requestError;
+    }
+
+    const createdOrder = res.data && res.data.data;
+    const totalCost = Number(createdOrder && createdOrder.totalCost);
+    if (!shippingQuote && Number.isFinite(totalCost) && totalCost > 0) {
+        shippingQuote = {
+            carrier: createdOrder.shipment && createdOrder.shipment.shippingCompany || SHIPPING_COMPANY,
+            totalCost,
+            carrierCost: Number(createdOrder.carrierCost) || null,
+            currency: CARRIER_RATE_CURRENCY,
+            source: 'shipbee-order-response'
+        };
+        console.info('[shipbee-order] Captured DHL price from ShipBee order response', {
+            orderId: shopifyOrder.id,
+            orderNo: createdOrder.orderNo,
+            totalCost: createdOrder.totalCost,
+            carrierCost: createdOrder.carrierCost,
+            shipbeeMargin: createdOrder.shipbeeMargin
+        });
+    } else if (paymentMethod === 'MONTHLY_BILL') {
+        console.warn('[shipbee-order] ShipBee order response did not include a valid positive totalCost', {
+            orderId: shopifyOrder.id,
+            orderNo: createdOrder && createdOrder.orderNo,
+            totalCost: createdOrder && createdOrder.totalCost
+        });
     }
 
     return {

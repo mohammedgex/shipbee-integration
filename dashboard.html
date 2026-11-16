@@ -1117,6 +1117,11 @@
             const weights = packageDetails ?
                 `${escapeHtml(packageDetails.actualWeightKg)} كجم فعلي / ${escapeHtml(packageDetails.chargeableWeightKg)} كجم للفوترة` :
                 'غير متوفر';
+            const quoteLabel = quote && quote.source === 'shipbee-order-response' ?
+                'سعر DHL من رد ShipBee' : 'سعر DHL التقديري';
+            const quoteNote = quote && quote.source === 'shipbee-order-response' ?
+                'السعر مأخوذ من totalCost في رد إنشاء الطلب من ShipBee، وليس من واجهة التسعير.' :
+                'سعر DHL تقديري من عرض السعر، وليس فاتورة الشحن النهائية.';
             let note = '';
             if (status.log && status.log.error) note = status.log.error;
             else if (status.log && status.log.reason) note = status.log.reason;
@@ -1152,7 +1157,7 @@
                     <div class="order-card"><strong>العميل</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
                     <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
                     <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'DHL')}</span></div>
-                    <div class="order-card"><strong>سعر DHL التقديري</strong><span>${escapeHtml(quoteAmount)}</span></div>
+                    <div class="order-card"><strong>${escapeHtml(quoteLabel)}</strong><span>${escapeHtml(quoteAmount)}</span></div>
                     <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
                     <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
                     <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
@@ -1161,7 +1166,7 @@
                         shipmentTrackings.map(item => `${escapeHtml(item.number)} — ${escapeHtml(item.status)}`).join('<br>') :
                         'لم يصدر بعد'}</span></div>
                 </div>
-                <p class="order-note">سعر DHL تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
+                <p class="order-note">${escapeHtml(quoteNote)} الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
                 ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
                 ${responseLog || errorLog ? `
                     <div class="order-card" style="margin-top:14px">
