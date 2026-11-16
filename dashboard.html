@@ -861,17 +861,30 @@
         }
 
         function getOrderStatus(logs) {
-            const success = logs.find(log => log.status === 'success');
-            if (success) return {
+            const latestOutcome = logs.find(log =>
+                ['success', 'shopify_update_failed'].includes(log.status) && log.tracking
+            );
+            const duplicate = logs.find(log =>
+                log.status === 'duplicate_skipped' &&
+                log.reason === 'A webhook for this Shopify order is already being processed'
+            );
+            if (duplicate && (!latestOutcome ||
+                Date.parse(duplicate.at) > Date.parse(latestOutcome.at))) {
+                return {
+                    label: 'Webhook مكرر — الطلب قيد المعالجة أو تم تجاهله',
+                    style: 'b-info',
+                    log: duplicate
+                };
+            }
+            if (latestOutcome && latestOutcome.status === 'success') return {
                 label: 'تم إنشاء الشحنة وتحديث Shopify',
                 style: 'b-success',
-                log: success
+                log: latestOutcome
             };
-            const updateFailure = logs.find(log => log.status === 'shopify_update_failed');
-            if (updateFailure) return {
-                label: 'الشحنة أُنشئت، لكن تحديث Shopify يحتاج مراجعة',
-                style: 'b-pending',
-                log: updateFailure
+            if (latestOutcome && latestOutcome.status === 'shopify_update_failed') return {
+                label: `الشحنة ${latestOutcome.tracking} أُنشئت، لكن تعذر ربطها في Shopify`,
+                style: 'b-failed',
+                log: latestOutcome
             };
             const rejected = logs.find(log =>
                 log.type === 'shipbee_response' && log.shipbeeResponse && !log.shipbeeResponse.success);
@@ -1026,7 +1039,21 @@
             const shopifyOrder = logs.find(log => log.orderSummary) ||
                 logs.find(log => log.orderNumber) || {};
             const status = getOrderStatus(logs);
-            const tracking = logs.find(log => log.tracking);
+            const shipmentTrackings = [];
+            const seenTrackings = new Set();
+            logs.forEach(log => {
+                const shipment = log.shipbeeResponse && log.shipbeeResponse.data &&
+                    log.shipbeeResponse.data.shipment;
+                const trackingNumber = log.tracking || shipment && shipment.trackingNumber;
+                if (!trackingNumber || seenTrackings.has(String(trackingNumber))) return;
+                seenTrackings.add(String(trackingNumber));
+                shipmentTrackings.push({
+                    number: trackingNumber,
+                    status: log.status === 'success' ? 'تم تسجيله في Shopify' :
+                        log.status === 'shopify_update_failed' ? 'لم يُربط في Shopify' :
+                            'صادر من ShipBee'
+                });
+            });
             const webhookRejection = logs.find(log => log.type === 'webhook_rejected');
             const displayOrder = hydrated || shopifyOrder;
             const shipbeeDetails = {
@@ -1130,7 +1157,9 @@
                     <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
                     <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
                     <div class="order-card"><strong>الوزن</strong><span>${weights}</span></div>
-                    <div class="order-card"><strong>رقم التتبع</strong><span>${escapeHtml(tracking ? tracking.tracking : 'لم يصدر بعد')}</span></div>
+                    <div class="order-card"><strong>أرقام التتبع</strong><span>${shipmentTrackings.length ?
+                        shipmentTrackings.map(item => `${escapeHtml(item.number)} — ${escapeHtml(item.status)}`).join('<br>') :
+                        'لم يصدر بعد'}</span></div>
                 </div>
                 <p class="order-note">سعر DHL تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
                 ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}

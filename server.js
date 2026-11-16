@@ -339,6 +339,47 @@ if (KV_URL && KV_TOKEN) {
 let inMemoryLogs = [];
 const LOG_KEY = 'mofage_logs';
 const MAX_LOGS = 200;
+const ORDER_SUBMISSION_LOCK_PREFIX = 'mofage:shipbee-order-lock:';
+const ORDER_SUBMISSION_LOCK_TTL_SECONDS = 300;
+const inFlightOrderSubmissions = new Set();
+
+async function acquireOrderSubmissionLock(orderId) {
+    const normalizedOrderId = String(orderId);
+    if (kv) {
+        const key = `${ORDER_SUBMISSION_LOCK_PREFIX}${normalizedOrderId}`;
+        const token = crypto.randomBytes(16).toString('hex');
+        const result = await kv.set(key, token, {
+            nx: true,
+            ex: ORDER_SUBMISSION_LOCK_TTL_SECONDS
+        });
+        return result === 'OK' ? { key, token, distributed: true } : null;
+    }
+
+    if (inFlightOrderSubmissions.has(normalizedOrderId)) return null;
+    inFlightOrderSubmissions.add(normalizedOrderId);
+    return { key: normalizedOrderId, token: null, distributed: false };
+}
+
+async function releaseOrderSubmissionLock(lock) {
+    if (!lock) return;
+    if (!lock.distributed) {
+        inFlightOrderSubmissions.delete(lock.key);
+        return;
+    }
+
+    try {
+        await kv.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            [lock.key],
+            [lock.token]
+        );
+    } catch (error) {
+        console.error('[shopify-order] failed to release submission lock; it will expire automatically', {
+            orderId: lock.key.slice(ORDER_SUBMISSION_LOCK_PREFIX.length),
+            message: error.message
+        });
+    }
+}
 
 async function pushLog(entry) {
     const log = {
@@ -390,7 +431,7 @@ async function findExistingShipBeeOrder(orderId) {
     const all = await getLogs();
     const responseLog = all.find(log => {
         const data = log.shipbeeResponse && log.shipbeeResponse.data;
-        return log.orderId === orderId &&
+        return String(log.orderId) === String(orderId) &&
             log.type === 'shipbee_response' &&
             log.shipbeeResponse &&
             log.shipbeeResponse.success &&
@@ -401,7 +442,9 @@ async function findExistingShipBeeOrder(orderId) {
 
     return {
         responseLog,
-        fulfilled: all.some(log => log.orderId === orderId && log.status === 'success')
+        fulfilled: all.some(log =>
+            String(log.orderId) === String(orderId) && log.status === 'success'
+        )
     };
 }
 
@@ -860,7 +903,8 @@ async function sendToShipBee(shopifyOrder) {
             headers: {
                 'x-api-key': SHIPBEE_API_KEY,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 20000
         }
         );
     } catch (error) {
@@ -951,6 +995,45 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
 
     if (!order || typeof order !== 'object' || !order.id) {
         return res.status(400).send('Invalid Shopify order payload');
+    }
+
+    let orderSubmissionLock;
+    try {
+        orderSubmissionLock = await acquireOrderSubmissionLock(order.id);
+    } catch (error) {
+        console.error('[shopify-order] could not acquire order submission lock', {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            message: error.message
+        });
+        await pushLog({
+            type: 'error',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            error: `تعذر تأمين الطلب ضد التكرار: ${error.message}`,
+            integrationErrorCode: 'ORDER_SUBMISSION_LOCK_UNAVAILABLE',
+            status: 'error'
+        });
+        return res.status(503).json({
+            success: false,
+            code: 'ORDER_SUBMISSION_LOCK_UNAVAILABLE',
+            message: 'تعذر تأمين الطلب ضد التكرار. لم يُرسل الطلب إلى ShipBee؛ أعد المحاولة بعد التحقق من KV.'
+        });
+    }
+
+    if (!orderSubmissionLock) {
+        await pushLog({
+            type: 'webhook_duplicate',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            reason: 'A webhook for this Shopify order is already being processed',
+            status: 'duplicate_skipped'
+        });
+        return res.status(200).json({
+            success: true,
+            duplicate: true,
+            message: 'هذا الطلب قيد المعالجة بالفعل، ولم يتم إرسال شحنة مكررة.'
+        });
     }
 
     const baseLog = await pushLog({
@@ -1177,6 +1260,8 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             status: 'error'
         });
         return res.status(500).json({ success: false, message: err.message });
+    } finally {
+        await releaseOrderSubmissionLock(orderSubmissionLock);
     }
 });
 
