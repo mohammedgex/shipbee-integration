@@ -51,10 +51,9 @@ const CARRIER_RATE_CURRENCY = 'QAR';
 const PLANNED_SHIPPING_DAYS_AHEAD = 3;
 
 function getPlannedShippingDate() {
-    const date = new Date();
+    const date = new Date(Date.now() + (3 * 60 * 60 * 1000));
     date.setUTCDate(date.getUTCDate() + PLANNED_SHIPPING_DAYS_AHEAD);
-    date.setUTCHours(10, 0, 0, 0);
-    return date.toISOString().replace(/\.\d{3}Z$/, ' GMT+00:00');
+    return `${date.toISOString().slice(0, 10)}T10:00:00 GMT+03:00`;
 }
 
 if (!PRODUCT_DIMENSION_RECORDS.length) {
@@ -301,18 +300,18 @@ function calculateCarrierRates(rate) {
 
 // ✅ بيانات Mofage الحقيقية
 const SENDER = {
-    name: 'Mofage',
+    name: 'Mofage Trading',
     phone: '+97450002690',
     email: 'info@mofage.net',
-    company: 'Mofage',
+    company: 'MOFAGE',
     address: {
         country: 'Qatar',
-        city: 'Lusail',
-        district: 'Fox Hills North',
-        street: 'St 217',
+        city: 'Doha',
+        district: 'West Bay',
+        street: 'Fox Hills North St 217',
         buildingNumber: '28',
-        landmarks: 'Savoy Residences A',
-        zone: 'Fox Hills'
+        landmarks: 'Savoy Residences A, Lusail',
+        zone: 'Zone 61'
     }
 };
 
@@ -410,17 +409,29 @@ async function findExistingShipBeeOrder(orderId) {
 // 3. HMAC Verification
 // ==========================================
 function verifyShopifyWebhook(req) {
-    if (!WEBHOOK_SECRET) return false;
+    if (!WEBHOOK_SECRET) {
+        return { valid: false, reason: 'SHOPIFY_WEBHOOK_SECRET غير مضبوط في إعدادات التطبيق' };
+    }
     const hmac = req.get('X-Shopify-Hmac-Sha256');
-    if (!hmac || !req.rawBody) return false;
+    if (!hmac) {
+        return { valid: false, reason: 'Shopify لم يرسل ترويسة X-Shopify-Hmac-Sha256' };
+    }
+    if (!req.rawBody) {
+        return { valid: false, reason: 'تعذر قراءة جسم Webhook الخام للتحقق من التوقيع' };
+    }
     try {
         const digest = crypto
             .createHmac('sha256', WEBHOOK_SECRET)
             .update(req.rawBody)
             .digest('base64');
-        return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(digest));
-    } catch {
-        return false;
+        const received = Buffer.from(hmac);
+        const expected = Buffer.from(digest);
+        return received.length === expected.length &&
+            crypto.timingSafeEqual(received, expected) ?
+            { valid: true, reason: null } :
+            { valid: false, reason: 'توقيع HMAC لا يطابق السر المضبوط؛ تحقق من تطابق Shopify و SHOPIFY_WEBHOOK_SECRET في Vercel' };
+    } catch (error) {
+        return { valid: false, reason: `تعذر التحقق من توقيع Webhook: ${error.message}` };
     }
 }
 
@@ -783,7 +794,22 @@ async function sendToShipBee(shopifyOrder) {
         },
         manufacturerCountry: 'China'
     }));
-    const shippingQuote = await getShippingQuote(addr, packageDetails);
+    let shippingQuote = null;
+    let shippingQuoteError = null;
+    let shippingQuoteDiagnostic = null;
+    try {
+        shippingQuote = await getShippingQuote(addr, packageDetails);
+    } catch (error) {
+        shippingQuoteError = error.message;
+        shippingQuoteDiagnostic = error.integrationDiagnostic || null;
+        console.warn('[shipbee-order] DHL quote unavailable; continuing with MONTHLY_BILL order', {
+            orderId: shopifyOrder.id,
+            orderNumber: shopifyOrder.order_number,
+            error: shippingQuoteError,
+            diagnostic: shippingQuoteDiagnostic
+        });
+    }
+
     const payload = {
         serviceSubcategory: 'International',
         paymentMethod: 'MONTHLY_BILL',
@@ -848,7 +874,9 @@ async function sendToShipBee(shopifyOrder) {
                     error.response.headers['request-id'] ||
                     error.response.headers['x-correlation-id']) || null,
             request: payload,
-            responseData: error.response && error.response.data || null
+            responseData: error.response && error.response.data || null,
+            shippingQuoteError,
+            shippingQuoteDiagnostic
         };
         throw requestError;
     }
@@ -858,6 +886,8 @@ async function sendToShipBee(shopifyOrder) {
         response: res.data,
         packageDetails,
         shippingQuote,
+        shippingQuoteError,
+        shippingQuoteDiagnostic,
         shipbeeHttpStatus: res.status,
         shipbeeRequestId: res.headers['x-request-id'] ||
             res.headers['request-id'] ||
@@ -901,13 +931,22 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
     const startedAt = Date.now();
     const order = req.body;
 
-    if (!verifyShopifyWebhook(req)) {
+    const verification = verifyShopifyWebhook(req);
+    if (!verification.valid) {
         await pushLog({
             type: 'webhook_rejected',
-            reason: 'HMAC invalid',
-            orderId: order && order.id
+            status: 'webhook_rejected',
+            reason: verification.reason,
+            orderId: order && order.id,
+            orderNumber: order && order.order_number,
+            shopifyWebhookId: req.get('X-Shopify-Webhook-Id') || null,
+            shopifyTopic: req.get('X-Shopify-Topic') || null
         });
-        return res.status(401).send('Unauthorized');
+        return res.status(401).json({
+            success: false,
+            code: 'SHOPIFY_WEBHOOK_HMAC_INVALID',
+            message: verification.reason
+        });
     }
 
     if (!order || typeof order !== 'object' || !order.id) {
@@ -1008,6 +1047,8 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             response,
             packageDetails,
             shippingQuote,
+            shippingQuoteError,
+            shippingQuoteDiagnostic,
             shipbeeHttpStatus,
             shipbeeRequestId
         } = await sendToShipBee(order);
@@ -1018,6 +1059,8 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             orderNumber: order.order_number,
             packageDetails,
             shippingQuote,
+            shippingQuoteError,
+            shippingQuoteDiagnostic,
             paymentMethod: payload.paymentMethod,
             shipbeeHttpStatus,
             shipbeeRequestId,
@@ -1128,6 +1171,8 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             shipbeeHttpStatus: err.integrationDiagnostic && err.integrationDiagnostic.httpStatus,
             shipbeeRequestId: err.integrationDiagnostic && err.integrationDiagnostic.requestId,
             shipbeeResponse: err.integrationDiagnostic && err.integrationDiagnostic.responseData,
+            shippingQuoteError: err.integrationDiagnostic && err.integrationDiagnostic.shippingQuoteError,
+            shippingQuoteDiagnostic: err.integrationDiagnostic && err.integrationDiagnostic.shippingQuoteDiagnostic,
             integrationDiagnostic: err.integrationDiagnostic || null,
             status: 'error'
         });

@@ -910,6 +910,14 @@
                     log: error
                 };
             }
+            const webhookRejection = logs.find(log => log.type === 'webhook_rejected');
+            if (webhookRejection) {
+                return {
+                    label: 'Shopify أرسل Webhook بتوقيع غير مقبول — الطلب لم يُرسل إلى ShipBee',
+                    style: 'b-failed',
+                    log: webhookRejection
+                };
+            }
             if (logs.some(log => log.status === 'duplicate_skipped')) {
                 return {
                     label: 'طلب مكرر — تم تجاهله',
@@ -980,6 +988,12 @@
                 integrationDiagnostic: redactSupportData(
                     errorLog && errorLog.integrationDiagnostic || null
                 ),
+                shippingQuoteError: errorLog && errorLog.shippingQuoteError ||
+                    responseLog && responseLog.shippingQuoteError || null,
+                shippingQuoteDiagnostic: redactSupportData(
+                    errorLog && errorLog.shippingQuoteDiagnostic ||
+                    responseLog && responseLog.shippingQuoteDiagnostic || null
+                ),
                 shopifyOrderNumber: (logs.find(log => log.orderNumber) || {}).orderNumber || null,
                 shipbeeOrderId: errorLog && errorLog.shipbeeOrderId ||
                     response && response.data && response.data.id || null,
@@ -1001,12 +1015,19 @@
             const responseLog = logs.find(log => log.type === 'shipbee_response');
             const errorLog = logs.find(log => log.status === 'error');
             const quote = getShippingQuote(logs) || (hydrated && hydrated.shippingQuote);
+            const shippingQuoteError = responseLog && responseLog.shippingQuoteError ||
+                errorLog && errorLog.shippingQuoteError ||
+                hydrated && hydrated.quoteError || null;
+            const shippingQuoteDiagnostic = responseLog && responseLog.shippingQuoteDiagnostic ||
+                errorLog && errorLog.shippingQuoteDiagnostic ||
+                hydrated && hydrated.quoteDiagnostic || null;
             const packageDetails = (responseLog && responseLog.packageDetails) ||
                 (hydrated && hydrated.packageDetails);
             const shopifyOrder = logs.find(log => log.orderSummary) ||
                 logs.find(log => log.orderNumber) || {};
             const status = getOrderStatus(logs);
             const tracking = logs.find(log => log.tracking);
+            const webhookRejection = logs.find(log => log.type === 'webhook_rejected');
             const displayOrder = hydrated || shopifyOrder;
             const shipbeeDetails = {
                 request: responseLog && responseLog.shipbeePayload ||
@@ -1014,15 +1035,24 @@
                     errorLog.integrationDiagnostic.request || null,
                 response: responseLog && responseLog.shipbeeResponse ||
                     errorLog && errorLog.shipbeeResponse || null,
-                error: errorLog && errorLog.error || null,
+                error: errorLog && errorLog.error ||
+                    responseLog && responseLog.shippingQuoteError ||
+                    webhookRejection && webhookRejection.reason || null,
                 errorDetails: errorLog && errorLog.integrationDiagnostic ||
-                    hydrated && hydrated.quoteDiagnostic || null,
+                    shippingQuoteDiagnostic ||
+                    (webhookRejection ? {
+                        code: 'SHOPIFY_WEBHOOK_HMAC_INVALID',
+                        webhookId: webhookRejection.shopifyWebhookId || null,
+                        topic: webhookRejection.shopifyTopic || null
+                    } : null),
                 shippingQuote: quote,
                 events: logs.map(log => ({
                     at: log.at,
                     type: log.type,
                     status: log.status,
                     error: log.error || null,
+                    reason: log.reason || null,
+                    shippingQuoteError: log.shippingQuoteError || null,
                     httpStatus: log.shipbeeHttpStatus || null,
                     requestId: log.shipbeeRequestId || null,
                     shipbeeOrderNo: log.shipbeeOrderNo || null,
@@ -1030,7 +1060,8 @@
                     request: log.shipbeePayload ||
                         log.integrationDiagnostic && log.integrationDiagnostic.request || null,
                     response: log.shipbeeResponse || null,
-                    diagnostic: log.integrationDiagnostic || null
+                    diagnostic: log.integrationDiagnostic || null,
+                    shippingQuoteDiagnostic: log.shippingQuoteDiagnostic || null
                 }))
             };
             const shippingLines = Array.isArray(summary.shippingLines) ? summary.shippingLines : [];
@@ -1061,6 +1092,7 @@
                 'غير متوفر';
             let note = '';
             if (status.log && status.log.error) note = status.log.error;
+            else if (status.log && status.log.reason) note = status.log.reason;
             else if (status.log && status.log.shipbeeResponse && status.log.shipbeeResponse.message) {
                 note = status.log.shipbeeResponse.message;
             } else if (status.stale) {
@@ -1070,7 +1102,7 @@
                 note = 'ShipBee قبل الطلب، لكنه لم يُرجع رقم تتبع مع MONTHLY_BILL. اعرض التشخيص وانسخه لإرساله لدعم ShipBee.';
             }
             if (hydrated && hydrated.packageError) note = hydrated.packageError;
-            if (hydrated && hydrated.quoteError) note = [note, hydrated.quoteError].filter(Boolean).join(' — ');
+            if (shippingQuoteError) note = [note, `تنبيه: أُرسل الطلب إلى ShipBee على MONTHLY_BILL دون عرض سعر DHL صالح. ${shippingQuoteError}`].filter(Boolean).join(' — ');
             const supportReport = getShipBeeSupportReport(logs, responseLog, errorLog);
 
             document.getElementById('log-details').innerHTML = `
