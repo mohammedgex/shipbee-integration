@@ -74,6 +74,10 @@ function normalizeProductTitle(title) {
 }
 
 function getProductNameSimilarity(left, right) {
+    if (left && right && (left.includes(right) || right.includes(left))) {
+        return 0.85 + (Math.min(left.length, right.length) / Math.max(left.length, right.length)) * 0.15;
+    }
+
     const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
     for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
         const currentRow = [leftIndex];
