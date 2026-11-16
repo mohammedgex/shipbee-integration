@@ -1293,16 +1293,17 @@
         document.getElementById('cancel-form').addEventListener('submit', event => {
             event.preventDefault();
             const orderNo = document.getElementById('cancel-order-no').value.trim();
-            if (!confirm(`سيتم إرسال إلغاء حقيقي لطلب ShipBee رقم ${orderNo}. هل أنت متأكد؟`)) return;
-            runForm(event.currentTarget, 'cancel-output', async () => {
-                const confirmText = prompt(`اكتب CANCEL ${orderNo} للتأكيد`);
-                if (confirmText !== `CANCEL ${orderNo}`) throw new Error('تم إلغاء التأكيد');
-                return apiRequest('/api/shipbee/cancel', {
+            if (!confirm(`سيتم إرسال طلب إلغاء حقيقي إلى ShipBee للطلب رقم ${orderNo}. هل تريد المتابعة؟`)) {
+                document.getElementById('cancel-output').textContent = 'لم يتم إرسال طلب الإلغاء.';
+                return;
+            }
+            runForm(event.currentTarget, 'cancel-output', () =>
+                apiRequest('/api/shipbee/cancel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderNo, confirm: confirmText })
-                });
-            });
+                    body: JSON.stringify({ orderNo, confirm: `CANCEL ${orderNo}` })
+                })
+            );
         });
 
         document.getElementById('pricing-form').addEventListener('submit', event => {
