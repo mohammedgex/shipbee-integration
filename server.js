@@ -871,7 +871,7 @@ async function sendToShipBee(shopifyOrder) {
             netValue: getLineItemWeightKg(item),
             grossValue: getLineItemWeightKg(item)
         },
-        manufacturerCountry: 'China'
+        manufacturerCountry: 'CHN'
     }));
     const paymentMethod = 'MONTHLY_BILL';
     let shippingQuote = null;

@@ -879,14 +879,6 @@
                 log.status === 'duplicate_skipped' &&
                 log.reason === 'A webhook for this Shopify order is already being processed'
             );
-            if (duplicate && (!latestOutcome ||
-                Date.parse(duplicate.at) > Date.parse(latestOutcome.at))) {
-                return {
-                    label: 'Webhook مكرر — الطلب قيد المعالجة أو تم تجاهله',
-                    style: 'b-info',
-                    log: duplicate
-                };
-            }
             if (latestOutcome && latestOutcome.status === 'success') return {
                 label: 'تم إنشاء الشحنة وتحديث Shopify',
                 style: 'b-success',
@@ -940,6 +932,14 @@
                     label: 'Shopify أرسل Webhook بتوقيع غير مقبول — الطلب لم يُرسل إلى ShipBee',
                     style: 'b-failed',
                     log: webhookRejection
+                };
+            }
+            if (duplicate && (!latestOutcome ||
+                Date.parse(duplicate.at) > Date.parse(latestOutcome.at))) {
+                return {
+                    label: 'Webhook مكرر — الطلب قيد المعالجة أو تم تجاهله',
+                    style: 'b-info',
+                    log: duplicate
                 };
             }
             if (logs.some(log => log.status === 'duplicate_skipped')) {
