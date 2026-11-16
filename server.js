@@ -532,6 +532,21 @@ function calculateChargeableWeight(actualWeightKg, lengthCm, widthCm, heightCm) 
     return Math.max(actualWeightKg, volumetricWeightKg);
 }
 
+function getShippingRecipientName(address, customer) {
+    const addressName = String(address && address.name || '').trim();
+    const addressParts = [
+        address && address.first_name,
+        address && address.last_name
+    ].filter(Boolean).join(' ').trim();
+    const customerName = String(customer && customer.name || '').trim();
+    const customerParts = [
+        customer && customer.first_name,
+        customer && customer.last_name
+    ].filter(Boolean).join(' ').trim();
+
+    return addressName || addressParts || customerName || customerParts || 'Guest';
+}
+
 function getOrderPackage(order) {
     const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
     if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
@@ -892,9 +907,7 @@ async function sendToShipBee(shopifyOrder) {
                 landmarks: (addr.company || addr.address1).substring(0, 45),
                 zipCode: addr.zip || undefined
             },
-            receiverName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim() ||
-                (shopifyOrder.customer && shopifyOrder.customer.first_name) ||
-                'Guest',
+            receiverName: getShippingRecipientName(addr, shopifyOrder.customer),
             receiverPhoneNumber: addr.phone || shopifyOrder.phone,
             receiverEmail: shopifyOrder.email || (shopifyOrder.customer && shopifyOrder.customer.email)
         }]
@@ -1076,10 +1089,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
         total: order.total_price,
         currency: order.currency,
         orderSummary: {
-            customerName: [
-                order.customer && order.customer.first_name || order.shipping_address && order.shipping_address.first_name,
-                order.customer && order.customer.last_name || order.shipping_address && order.shipping_address.last_name
-            ].filter(Boolean).join(' '),
+            customerName: getShippingRecipientName(order.shipping_address, order.customer),
             items: (Array.isArray(order.line_items) ? order.line_items : []).map(item => ({
                 title: item.title || 'منتج بدون اسم',
                 sku: item.sku || '',
@@ -1629,10 +1639,7 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
         success: true,
         orderId: order.id,
         orderNumber: order.order_number,
-        customerName: [
-            customer.first_name || address.first_name,
-            customer.last_name || address.last_name
-        ].filter(Boolean).join(' '),
+        customerName: getShippingRecipientName(address, customer),
         total: order.total_price,
         currency: order.currency,
         city: address.city || '',

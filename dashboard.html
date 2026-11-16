@@ -846,6 +846,17 @@
             return log ? log.orderSummary : {};
         }
 
+        function getShipBeeRecipientName(logs) {
+            const log = logs.find(item => item.type === 'shipbee_response');
+            const requestName = log && log.shipbeePayload && log.shipbeePayload.stops &&
+                log.shipbeePayload.stops[0] && log.shipbeePayload.stops[0].receiverName;
+            const responseName = log && log.shipbeeResponse && log.shipbeeResponse.data &&
+                log.shipbeeResponse.data.stops && log.shipbeeResponse.data.stops[0] &&
+                log.shipbeeResponse.data.stops[0].receiver &&
+                log.shipbeeResponse.data.stops[0].receiver.name;
+            return requestName || responseName || null;
+        }
+
         function getShippingQuote(logs) {
             const log = logs.find(item => item.shippingQuote);
             return log ? log.shippingQuote : null;
@@ -1038,12 +1049,16 @@
             const logs = getOrderLogs(orderId);
             const savedSummary = getOrderSummary(logs);
             const hydrated = hydratedOrders.get(String(orderId));
+            const responseLog = logs.find(log => log.type === 'shipbee_response');
+            const shipbeeRecipientName = getShipBeeRecipientName(logs);
             const summary = hydrated ? {
-                customerName: hydrated.customerName,
+                customerName: shipbeeRecipientName || hydrated.customerName,
                 items: hydrated.items,
                 shippingLines: hydrated.shippingLines
-            } : savedSummary;
-            const responseLog = logs.find(log => log.type === 'shipbee_response');
+            } : {
+                ...savedSummary,
+                customerName: shipbeeRecipientName || savedSummary.customerName
+            };
             const errorLog = logs.find(log => log.status === 'error');
             const quote = getShippingQuote(logs) || (hydrated && hydrated.shippingQuote);
             const shippingQuoteError = responseLog && responseLog.shippingQuoteError ||
@@ -1172,7 +1187,7 @@
                 </div>
                 <div class="order-summary">
                     <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
-                    <div class="order-card"><strong>العميل</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
+                    <div class="order-card"><strong>مستلم الشحنة</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
                     <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
                     <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'DHL')}</span></div>
                     <div class="order-card"><strong>${escapeHtml(quoteLabel)}</strong><span>${escapeHtml(quoteAmount)}</span></div>
@@ -1343,11 +1358,14 @@
                         relatedLogs.find(item => item.orderNumber) || log;
                     const quote = getShippingQuote(relatedLogs);
                     const hydrated = hydratedOrders.get(String(orderId));
+                    const recipientName = getShipBeeRecipientName(relatedLogs);
                     return `
                         <tr class="main-row" data-order-id="${escapeHtml(log.orderId || '')}">
                             <td>${escapeHtml(new Date(log.at).toLocaleString('ar-EG'))}</td>
                             <td>#${escapeHtml(log.orderNumber || log.orderId || '—')}</td>
-                            <td>${escapeHtml(log.customer || orderLog.customer || (hydrated && hydrated.customerName) || '—')}</td>
+                            <td>${escapeHtml(recipientName || (hydrated && hydrated.customerName) ||
+                                (orderLog.orderSummary && orderLog.orderSummary.customerName) ||
+                                log.customer || orderLog.customer || '—')}</td>
                             <td>${escapeHtml(log.country || orderLog.country || (hydrated && hydrated.country) || '—')}</td>
                             <td>${formatAmount(orderLog.total || (hydrated && hydrated.total), orderLog.currency || (hydrated && hydrated.currency))}</td>
                             <td>${escapeHtml(quote && quote.totalCost != null ?
