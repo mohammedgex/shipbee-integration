@@ -546,10 +546,23 @@ async function getShippingQuote(address, packageDetails) {
     try {
         response = await axios.get(`${SHIPBEE_BASE_URL}/api/pricing/calculate`, {
             params,
-            headers: { 'x-api-key': SHIPBEE_API_KEY }
+            headers: { 'x-api-key': SHIPBEE_API_KEY },
+            timeout: 8000
         });
     } catch (error) {
-        throw new Error(describeAxiosError(error, 'ShipBee GET /api/pricing/calculate'));
+        const requestError = new Error(describeAxiosError(error, 'ShipBee GET /api/pricing/calculate'));
+        requestError.integrationDiagnostic = {
+            serviceName: 'ShipBee DHL pricing',
+            endpoint: '/api/pricing/calculate',
+            httpStatus: error.response && error.response.status || null,
+            requestId: error.response && error.response.headers &&
+                (error.response.headers['x-request-id'] ||
+                    error.response.headers['request-id'] ||
+                    error.response.headers['x-correlation-id']) || null,
+            request: params,
+            responseData: error.response && error.response.data || null
+        };
+        throw requestError;
     }
 
     const days = Array.isArray(response.data) ? response.data :
@@ -558,16 +571,30 @@ async function getShippingQuote(address, packageDetails) {
     const sortedDays = days
         .filter(day => day.date >= today)
         .sort((left, right) => left.date.localeCompare(right.date));
+    const dhlQuotes = [];
     for (const day of sortedDays) {
-        const dhl = (day.carriers || []).find(carrier =>
-            carrier.carrier === SHIPPING_COMPANY &&
-            carrier.totalCost !== null &&
-            Number.isFinite(Number(carrier.totalCost))
-        );
-        if (dhl) return { ...dhl, quotedDate: day.date };
+        for (const carrier of day.carriers || []) {
+            if (carrier.carrier !== SHIPPING_COMPANY) continue;
+            const totalCost = Number(carrier.totalCost);
+            if (Number.isFinite(totalCost) && totalCost > 0) {
+                return { ...carrier, quotedDate: day.date };
+            }
+            dhlQuotes.push({ date: day.date, totalCost: carrier.totalCost });
+        }
     }
 
-    throw new Error(`ShipBee لم يُرجع عرض ${SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`);
+    const reason = dhlQuotes.length ?
+        `ShipBee أعاد سعر DHL غير صالح: ${JSON.stringify(dhlQuotes)}` :
+        `ShipBee لم يُرجع عرض ${SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`;
+    const quoteError = new Error(reason);
+    quoteError.integrationDiagnostic = {
+        serviceName: 'ShipBee DHL pricing',
+        endpoint: '/api/pricing/calculate',
+        request: params,
+        responseData: response.data,
+        invalidQuotes: dhlQuotes
+    };
+    throw quoteError;
 }
 
 function extractBuildingNumber(addr) {
@@ -811,7 +838,19 @@ async function sendToShipBee(shopifyOrder) {
         }
         );
     } catch (error) {
-        throw new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
+        const requestError = new Error(describeAxiosError(error, 'ShipBee POST /api/orders'));
+        requestError.integrationDiagnostic = {
+            serviceName: 'ShipBee order creation',
+            endpoint: '/api/orders',
+            httpStatus: error.response && error.response.status || null,
+            requestId: error.response && error.response.headers &&
+                (error.response.headers['x-request-id'] ||
+                    error.response.headers['request-id'] ||
+                    error.response.headers['x-correlation-id']) || null,
+            request: payload,
+            responseData: error.response && error.response.data || null
+        };
+        throw requestError;
     }
 
     return {
@@ -1086,6 +1125,10 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             orderId: order.id,
             orderNumber: order.order_number,
             error: err.message,
+            shipbeeHttpStatus: err.integrationDiagnostic && err.integrationDiagnostic.httpStatus,
+            shipbeeRequestId: err.integrationDiagnostic && err.integrationDiagnostic.requestId,
+            shipbeeResponse: err.integrationDiagnostic && err.integrationDiagnostic.responseData,
+            integrationDiagnostic: err.integrationDiagnostic || null,
             status: 'error'
         });
         return res.status(500).json({ success: false, message: err.message });
@@ -1407,12 +1450,14 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
     let packageError = null;
     let shippingQuote = null;
     let quoteError = null;
+    let quoteDiagnostic = null;
     try {
         packageDetails = getOrderPackage(order);
         try {
             shippingQuote = await getShippingQuote(order.shipping_address, packageDetails);
         } catch (error) {
             quoteError = error.message;
+            quoteDiagnostic = error.integrationDiagnostic || null;
         }
     } catch (error) {
         packageError = error.message;
@@ -1447,7 +1492,8 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
         packageDetails,
         packageError,
         shippingQuote,
-        quoteError
+        quoteError,
+        quoteDiagnostic
     });
 });
 app.delete('/api/logs', requireDashboardAuth, async (req, res) => {

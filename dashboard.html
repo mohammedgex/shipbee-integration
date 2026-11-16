@@ -823,6 +823,15 @@
             return log ? log.shippingQuote : null;
         }
 
+        function formatShippingQuote(quote) {
+            if (!quote || quote.totalCost == null) return 'لم يصل عرض سعر';
+            const amount = Number(quote.totalCost);
+            if (!Number.isFinite(amount) || amount <= 0) {
+                return `عرض سعر غير صالح (${formatAmount(quote.totalCost, quote.currency || quote.currencyCode)})`;
+            }
+            return formatAmount(amount, quote.currency || quote.currencyCode);
+        }
+
         function getOrderStatus(logs) {
             const success = logs.find(log => log.status === 'success');
             if (success) return { label: 'تم إنشاء الشحنة وتحديث Shopify', style: 'b-success', log: success };
@@ -853,7 +862,13 @@
                 return {
                     label: error.integrationErrorCode === 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' ?
                         'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)' :
-                        'تعذر تجهيز الشحنة',
+                        error.integrationDiagnostic &&
+                            error.integrationDiagnostic.serviceName === 'ShipBee DHL pricing' ?
+                            'فشل الحصول على سعر DHL من ShipBee' :
+                            error.integrationDiagnostic &&
+                                error.integrationDiagnostic.serviceName === 'ShipBee order creation' ?
+                                'فشل إنشاء الطلب لدى ShipBee' :
+                            'تعذر تجهيز الشحنة',
                     style: 'b-failed',
                     log: error
                 };
@@ -861,10 +876,13 @@
             if (logs.some(log => log.status === 'duplicate_skipped')) {
                 return { label: 'طلب مكرر — تم تجاهله', style: 'b-info', log: null };
             }
-            const processingLog = logs.find(log => log.status === 'processing');
-            if (processingLog && Date.now() - new Date(processingLog.at).getTime() > 120000) {
+            const processingLog = logs.find(log =>
+                ['processing', 'webhook_received', 'shipbee_submission_started'].includes(log.status)
+            );
+            const processingAge = processingLog ? Date.now() - Date.parse(processingLog.at) : 0;
+            if (processingLog && (!Number.isFinite(processingAge) || processingAge > 120000)) {
                 return {
-                    label: 'وصل Shopify ولم تكتمل المعالجة',
+                    label: 'لا توجد نتيجة مسجلة من ShipBee',
                     style: 'b-failed',
                     log: processingLog,
                     stale: true
@@ -916,6 +934,9 @@
                     responseLog && responseLog.shipbeeHttpStatus || null,
                 requestId: errorLog && errorLog.shipbeeRequestId ||
                     responseLog && responseLog.shipbeeRequestId || null,
+                integrationDiagnostic: redactSupportData(
+                    errorLog && errorLog.integrationDiagnostic || null
+                ),
                 shopifyOrderNumber: (logs.find(log => log.orderNumber) || {}).orderNumber || null,
                 shipbeeOrderId: errorLog && errorLog.shipbeeOrderId ||
                     response && response.data && response.data.id || null,
@@ -944,6 +965,31 @@
             const status = getOrderStatus(logs);
             const tracking = logs.find(log => log.tracking);
             const displayOrder = hydrated || shopifyOrder;
+            const shipbeeDetails = {
+                request: responseLog && responseLog.shipbeePayload ||
+                    errorLog && errorLog.integrationDiagnostic &&
+                        errorLog.integrationDiagnostic.request || null,
+                response: responseLog && responseLog.shipbeeResponse ||
+                    errorLog && errorLog.shipbeeResponse || null,
+                error: errorLog && errorLog.error || null,
+                errorDetails: errorLog && errorLog.integrationDiagnostic ||
+                    hydrated && hydrated.quoteDiagnostic || null,
+                shippingQuote: quote,
+                events: logs.map(log => ({
+                    at: log.at,
+                    type: log.type,
+                    status: log.status,
+                    error: log.error || null,
+                    httpStatus: log.shipbeeHttpStatus || null,
+                    requestId: log.shipbeeRequestId || null,
+                    shipbeeOrderNo: log.shipbeeOrderNo || null,
+                    tracking: log.tracking || null,
+                    request: log.shipbeePayload ||
+                        log.integrationDiagnostic && log.integrationDiagnostic.request || null,
+                    response: log.shipbeeResponse || null,
+                    diagnostic: log.integrationDiagnostic || null
+                }))
+            };
             const shippingLines = Array.isArray(summary.shippingLines) ? summary.shippingLines : [];
             const customerShipping = shippingLines.length ?
                 shippingLines.map(line => `${escapeHtml(line.title || 'شحن Shopify')}: ${formatAmount(line.price, line.currency)}`).join('، ') :
@@ -958,14 +1004,12 @@
                         <td>${escapeHtml(item.title || 'منتج بدون اسم')}</td>
                         <td>${escapeHtml(item.sku || 'بدون SKU')}</td>
                         <td>${escapeHtml(item.quantity == null ? '—' : item.quantity)}</td>
-                        <td>${formatAmount(item.unitPrice, shopifyOrder.currency)}</td>
-                        <td>${formatAmount(lineTotal, shopifyOrder.currency)}</td>
+                        <td>${formatAmount(item.unitPrice, displayOrder.currency || shopifyOrder.currency)}</td>
+                        <td>${formatAmount(lineTotal, displayOrder.currency || shopifyOrder.currency)}</td>
                     </tr>`;
             }).join('') :
                 '<tr><td colspan="5" class="empty">تفاصيل المنتجات غير متوفرة لهذا السجل.</td></tr>';
-            const quoteAmount = quote && quote.totalCost != null ?
-                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) :
-                'لم يصل عرض سعر';
+            const quoteAmount = formatShippingQuote(quote);
             const packageDimensions = packageDetails ?
                 `${escapeHtml(packageDetails.length)} × ${escapeHtml(packageDetails.width)} × ${escapeHtml(packageDetails.height)} سم` :
                 'غير متوفر';
@@ -1021,6 +1065,12 @@
                         </details>
                         <p id="copy-shipbee-report-status" class="muted" style="margin-top:8px"></p>
                     </div>` : ''}
+                ${logs.length ? `
+                    <details class="order-card" style="margin-top:14px">
+                        <summary style="cursor:pointer"><strong>تفاصيل الطلب المرسل ورد شركة الشحن وكل الأحداث</strong></summary>
+                        <p class="muted" style="margin-top:8px">يشمل الطلب المرسل، رد ShipBee الكامل، الأخطاء، وتسلسل أحداث هذا الطلب. إذا لم يظهر طلب أو رد، فستجد حالة آخر حدث مسجل.</p>
+                        <pre style="margin-top:10px">${escapeHtml(JSON.stringify(shipbeeDetails, null, 2))}</pre>
+                    </details>` : ''}
                 <h3 class="order-details-title" style="margin-top:18px">المنتجات</h3>
                 <div class="table-wrap">
                     <table class="order-items">
@@ -1160,9 +1210,9 @@
                             <td>${escapeHtml(log.country || orderLog.country || (hydrated && hydrated.country) || '—')}</td>
                             <td>${formatAmount(orderLog.total || (hydrated && hydrated.total), orderLog.currency || (hydrated && hydrated.currency))}</td>
                             <td>${escapeHtml(quote && quote.totalCost != null ?
-                                formatAmount(quote.totalCost, quote.currency || quote.currencyCode) :
+                                formatShippingQuote(quote) :
                                 (hydrated && hydrated.shippingQuote ?
-                                    formatAmount(hydrated.shippingQuote.totalCost, hydrated.shippingQuote.currency || hydrated.shippingQuote.currencyCode) :
+                                    formatShippingQuote(hydrated.shippingQuote) :
                                     '—'))}</td>
                             <td>${escapeHtml(getOrderStatus(relatedLogs).label)}</td>
                             <td>${escapeHtml((relatedLogs.find(item => item.tracking) || {}).tracking || '—')}</td>
