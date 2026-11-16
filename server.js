@@ -45,9 +45,17 @@ const PRODUCT_DIMENSION_RECORDS = Array.isArray(loadedProductDimensions) ?
     loadedProductDimensions :
     (loadedProductDimensions && Array.isArray(loadedProductDimensions.products) ?
         loadedProductDimensions.products : []);
-const SMSA_VOLUMETRIC_DIVISOR = 5000;
-const SMSA_SHIPPING_COMPANY = 'SMSA GCC Land Express';
+const VOLUMETRIC_DIVISOR = 5000;
+const SHIPPING_COMPANY = 'DHL';
 const CARRIER_RATE_CURRENCY = 'QAR';
+const PLANNED_SHIPPING_DAYS_AHEAD = 3;
+
+function getPlannedShippingDate() {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() + PLANNED_SHIPPING_DAYS_AHEAD);
+    date.setUTCHours(10, 0, 0, 0);
+    return date.toISOString().replace(/\.\d{3}Z$/, ' GMT+00:00');
+}
 
 if (!PRODUCT_DIMENSION_RECORDS.length) {
     throw new Error(`${PRODUCT_DIMENSIONS_PATH} must contain a non-empty array of product dimension records`);
@@ -226,7 +234,7 @@ function getCarrierItemWeightKg(item, productDimensions) {
 }
 
 function getEstimatedPackageDimensions(weightKg) {
-    const side = Math.cbrt(weightKg * SMSA_VOLUMETRIC_DIVISOR);
+    const side = Math.cbrt(weightKg * VOLUMETRIC_DIVISOR);
     return { length: side, width: side, height: side };
 }
 
@@ -252,9 +260,8 @@ function calculateCarrierRates(rate) {
 
         const productDimensions = findCarrierProductDimensions(item);
         const itemWeightKg = getCarrierItemWeightKg(item, productDimensions);
-        const hasProductDimensions = productDimensions &&
-            [productDimensions.length, productDimensions.width, productDimensions.height]
-                .every(value => Number.isFinite(Number(value)) && Number(value) > 0);
+        const hasProductDimensions = productDimensions && [productDimensions.length, productDimensions.width, productDimensions.height]
+            .every(value => Number.isFinite(Number(value)) && Number(value) > 0);
         if (!hasProductDimensions && itemWeightKg <= 0) return [];
 
         actualWeightKg += itemWeightKg * quantity;
@@ -267,10 +274,10 @@ function calculateCarrierRates(rate) {
     }
 
     if (actualWeightKg <= 0 && totalVolumeCm3 <= 0) return [];
-    if (actualWeightKg <= 0) actualWeightKg = totalVolumeCm3 / SMSA_VOLUMETRIC_DIVISOR;
+    if (actualWeightKg <= 0) actualWeightKg = totalVolumeCm3 / VOLUMETRIC_DIVISOR;
 
     const length = Math.max(maxLength, totalVolumeCm3 / (maxWidth * maxHeight));
-    const volumetricWeightKg = (length * maxWidth * maxHeight) / SMSA_VOLUMETRIC_DIVISOR;
+    const volumetricWeightKg = (length * maxWidth * maxHeight) / VOLUMETRIC_DIVISOR;
     const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg);
     if (!Number.isFinite(chargeableWeightKg) || chargeableWeightKg <= 0) return [];
 
@@ -280,18 +287,8 @@ function calculateCarrierRates(rate) {
     maxDeliveryDate.setUTCDate(maxDeliveryDate.getUTCDate() + 7);
     const rates = [];
 
-    if (chargeableWeightKg <= 30) {
-        rates.push({
-            service_name: SMSA_SHIPPING_COMPANY,
-            service_code: 'SMSA_GCC_LAND',
-            total_price: Math.round((60 + (chargeableWeightKg * 15)) * 100),
-            currency: CARRIER_RATE_CURRENCY,
-            min_delivery_date: minDeliveryDate.toISOString(),
-            max_delivery_date: maxDeliveryDate.toISOString()
-        });
-    }
     rates.push({
-        service_name: 'DHL',
+        service_name: SHIPPING_COMPANY,
         service_code: 'DHL',
         total_price: Math.round((120 + (chargeableWeightKg * 35)) * 100),
         currency: CARRIER_RATE_CURRENCY,
@@ -481,7 +478,7 @@ function getOrderWeightKg(order) {
 }
 
 function calculateChargeableWeight(actualWeightKg, lengthCm, widthCm, heightCm) {
-    const volumetricWeightKg = (lengthCm * widthCm * heightCm) / SMSA_VOLUMETRIC_DIVISOR;
+    const volumetricWeightKg = (lengthCm * widthCm * heightCm) / VOLUMETRIC_DIVISOR;
     return Math.max(actualWeightKg, volumetricWeightKg);
 }
 
@@ -526,7 +523,7 @@ function getOrderPackage(order) {
     };
 }
 
-async function getSmsaQuote(address, packageDetails) {
+async function getShippingQuote(address, packageDetails) {
     if (!SHIPBEE_API_KEY) throw new Error('SHIPBEE_API_KEY غير مضبوط');
 
     const params = {
@@ -540,7 +537,8 @@ async function getSmsaQuote(address, packageDetails) {
         width: packageDetails.width,
         height: packageDetails.height,
         incoterm: 'DDU',
-        shippingCompany: SMSA_SHIPPING_COMPANY
+        shippingCompany: SHIPPING_COMPANY,
+        plannedShippingDate: getPlannedShippingDate().split('T')[0]
     };
     if (address.zip) params.toPostCode = address.zip;
 
@@ -556,16 +554,20 @@ async function getSmsaQuote(address, packageDetails) {
 
     const days = Array.isArray(response.data) ? response.data :
         (response.data && Array.isArray(response.data.data) ? response.data.data : []);
-    for (const day of days) {
-        const smsa = (day.carriers || []).find(carrier =>
-            carrier.carrier === SMSA_SHIPPING_COMPANY &&
+    const today = new Date().toISOString().split('T')[0];
+    const sortedDays = days
+        .filter(day => day.date >= today)
+        .sort((left, right) => left.date.localeCompare(right.date));
+    for (const day of sortedDays) {
+        const dhl = (day.carriers || []).find(carrier =>
+            carrier.carrier === SHIPPING_COMPANY &&
             carrier.totalCost !== null &&
             Number.isFinite(Number(carrier.totalCost))
         );
-        if (smsa) return smsa;
+        if (dhl) return { ...dhl, quotedDate: day.date };
     }
 
-    throw new Error(`ShipBee لم يُرجع عرض ${SMSA_SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`);
+    throw new Error(`ShipBee لم يُرجع عرض ${SHIPPING_COMPANY} صالحًا لهذا العنوان والوزن`);
 }
 
 function extractBuildingNumber(addr) {
@@ -754,7 +756,7 @@ async function sendToShipBee(shopifyOrder) {
         },
         manufacturerCountry: 'China'
     }));
-    const shippingQuote = await getSmsaQuote(addr, packageDetails);
+    const shippingQuote = await getShippingQuote(addr, packageDetails);
     const payload = {
         serviceSubcategory: 'International',
         paymentMethod: 'MONTHLY_BILL',
@@ -764,16 +766,18 @@ async function sendToShipBee(shopifyOrder) {
         senderCompanyName: SENDER.company,
         fromAddress: SENDER.address,
         shipment: {
-            shippingCompany: SMSA_SHIPPING_COMPANY,
+            shippingCompany: SHIPPING_COMPANY,
             weight: packageDetails.chargeableWeightKg,
             length: packageDetails.length,
             width: packageDetails.width,
             height: packageDetails.height,
             itemCount: 1,
             totalValue: customsTotalValue,
-            description: 'Headphones & Earbuds',
+            description: 'Home Décor Items',
             incoterm: 'DDU',
-            purpose: 'commercial',
+            purpose: 'Sale',
+            plannedShippingDateAndTime: getPlannedShippingDate(),
+            pickupRequested: false,
             lineItems: customsLineItems
         },
         stops: [{
@@ -924,7 +928,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
                 const ff = await fulfillShopifyOrder(
                     order.id,
                     previousShipment.trackingNumber,
-                    previousShipment.shippingCompany || 'DHL'
+                    previousShipment.shippingCompany || SHIPPING_COMPANY
                 );
                 await pushLog({
                     type: 'success',
@@ -933,7 +937,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
                     customer: order.email || (order.customer && order.customer.email),
                     country: order.shipping_address && order.shipping_address.country,
                     tracking: previousShipment.trackingNumber,
-                    trackingCompany: previousShipment.shippingCompany || 'DHL',
+                    trackingCompany: previousShipment.shippingCompany || SHIPPING_COMPANY,
                     fulfillmentId: ff.fulfillmentId,
                     durationMs: Date.now() - startedAt,
                     status: 'success'
@@ -1001,7 +1005,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
                 shipbeeOrderId: response.data && response.data.id,
                 shipbeeOrderNo: response.data && response.data.orderNo,
                 paymentMethod: payload.paymentMethod,
-                carrier: shipment.shippingCompany || SMSA_SHIPPING_COMPANY,
+                carrier: shipment.shippingCompany || SHIPPING_COMPANY,
                 shipbeeHttpStatus,
                 shipbeeRequestId,
                 shipbeeErrorCode: getShipBeeErrorCode(response),
@@ -1038,7 +1042,7 @@ app.post('/webhooks/shopify/order-created', async (req, res) => {
             const ff = await fulfillShopifyOrder(
                 order.id,
                 tracking,
-                shipment.shippingCompany || SMSA_SHIPPING_COMPANY
+                shipment.shippingCompany || SHIPPING_COMPANY
             );
 
             await pushLog({
@@ -1377,18 +1381,17 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
     try {
         const token = await getShopifyToken();
         response = await axios.get(
-            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`,
-            {
-                headers: { 'X-Shopify-Access-Token': token },
-                params: {
-                    fields: [
-                        'id', 'order_number', 'email', 'phone', 'total_price',
-                        'current_subtotal_price', 'subtotal_price', 'currency',
-                        'customer', 'shipping_address', 'shipping_lines', 'line_items'
-                    ].join(',')
-                },
-                timeout: 15000
-            }
+            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`, {
+            headers: { 'X-Shopify-Access-Token': token },
+            params: {
+                fields: [
+                    'id', 'order_number', 'email', 'phone', 'total_price',
+                    'current_subtotal_price', 'subtotal_price', 'currency',
+                    'customer', 'shipping_address', 'shipping_lines', 'line_items'
+                ].join(',')
+            },
+            timeout: 15000
+        }
         );
     } catch (error) {
         const message = describeAxiosError(error, 'Shopify GET order details');
@@ -1407,7 +1410,7 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
     try {
         packageDetails = getOrderPackage(order);
         try {
-            shippingQuote = await getSmsaQuote(order.shipping_address, packageDetails);
+            shippingQuote = await getShippingQuote(order.shipping_address, packageDetails);
         } catch (error) {
             quoteError = error.message;
         }

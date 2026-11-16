@@ -659,14 +659,14 @@
                 <section id="view-integration" class="view">
                     <div class="panel">
                         <h2>سجلات Shopify ↔ ShipBee</h2>
-                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر SMSA التقديري بطريقة مبسطة.</p>
+                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر DHL التقديري بطريقة مبسطة.</p>
                         <div class="toolbar">
                             <button class="btn" onclick="loadLogs()">تحديث</button>
                             <button class="btn danger" onclick="clearLogs()">مسح السجلات المحلية</button>
                         </div>
                         <div class="table-wrap">
                             <table>
-                                <thead><tr><th>الوقت</th><th>الطلب</th><th>العميل</th><th>الدولة</th><th>إجمالي الطلب</th><th>شحن SMSA التقديري</th><th>الحالة</th><th>التتبع</th></tr></thead>
+                                <thead><tr><th>الوقت</th><th>الطلب</th><th>العميل</th><th>الدولة</th><th>إجمالي الطلب</th><th>شحن DHL التقديري</th><th>الحالة</th><th>التتبع</th></tr></thead>
                                 <tbody id="tbody"><tr><td colspan="8" class="empty">جاري التحميل...</td></tr></tbody>
                             </table>
                         </div>
@@ -989,21 +989,21 @@
             document.getElementById('log-details').innerHTML = `
                 <div class="toolbar" style="justify-content:space-between;align-items:center">
                     <h3 class="order-details-title">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
-                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر SMSA</button>
+                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر DHL</button>
                 </div>
                 <div class="order-summary">
                     <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
                     <div class="order-card"><strong>العميل</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
                     <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
-                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'SMSA GCC Land Express')}</span></div>
-                    <div class="order-card"><strong>سعر SMSA التقديري</strong><span>${escapeHtml(quoteAmount)}</span></div>
+                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'DHL')}</span></div>
+                    <div class="order-card"><strong>سعر DHL التقديري</strong><span>${escapeHtml(quoteAmount)}</span></div>
                     <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
                     <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
                     <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
                     <div class="order-card"><strong>الوزن</strong><span>${weights}</span></div>
                     <div class="order-card"><strong>رقم التتبع</strong><span>${escapeHtml(tracking ? tracking.tracking : 'لم يصدر بعد')}</span></div>
                 </div>
-                <p class="order-note">سعر SMSA تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
+                <p class="order-note">سعر DHL تقديري من عرض السعر، وليس فاتورة الشحن النهائية. الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
                 ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
                 ${responseLog || errorLog ? `
                     <div class="order-card" style="margin-top:14px">
@@ -1063,7 +1063,7 @@
 
         async function refreshOrderDetails(orderId) {
             const message = document.getElementById('order-refresh-message');
-            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض SMSA...';
+            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض DHL...';
             try {
                 const details = await apiRequest(
                     `/api/shopify/orders/${encodeURIComponent(orderId)}/details`
