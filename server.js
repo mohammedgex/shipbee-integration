@@ -1556,7 +1556,8 @@ app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
     }
     res.json({
         environment,
-        apiKeyConfigured: Boolean(SHIPBEE_API_KEY)
+        apiKeyConfigured: Boolean(SHIPBEE_API_KEY),
+        webhookSecretConfigured: Boolean(WEBHOOK_SECRET)
     });
 });
 app.get('/', (req, res) => res.redirect('/dashboard'));

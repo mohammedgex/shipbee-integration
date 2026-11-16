@@ -1102,7 +1102,17 @@
                 note = 'ShipBee قبل الطلب، لكنه لم يُرجع رقم تتبع مع MONTHLY_BILL. اعرض التشخيص وانسخه لإرساله لدعم ShipBee.';
             }
             if (hydrated && hydrated.packageError) note = hydrated.packageError;
-            if (shippingQuoteError) note = [note, `تنبيه: أُرسل الطلب إلى ShipBee على MONTHLY_BILL دون عرض سعر DHL صالح. ${shippingQuoteError}`].filter(Boolean).join(' — ');
+            if (shippingQuoteError) {
+                const orderWasSubmitted = Boolean(responseLog ||
+                    (errorLog && errorLog.integrationDiagnostic &&
+                        errorLog.integrationDiagnostic.serviceName === 'ShipBee order creation'));
+                const quoteNote = webhookRejection ?
+                    `معلومة تسعير منفصلة؛ الطلب لم يصل إلى ShipBee: ${shippingQuoteError}` :
+                    orderWasSubmitted ?
+                        `تم إرسال الطلب على MONTHLY_BILL دون عرض DHL صالح: ${shippingQuoteError}` :
+                        `تعذر الحصول على عرض DHL: ${shippingQuoteError}`;
+                note = [note, quoteNote].filter(Boolean).join(' — ');
+            }
             const supportReport = getShipBeeSupportReport(logs, responseLog, errorLog);
 
             document.getElementById('log-details').innerHTML = `
@@ -1238,9 +1248,13 @@
                 const config = await apiRequest('/api/shipbee/config');
                 const badge = document.getElementById('environment');
                 badge.textContent = `ShipBee: ${config.environment}`;
-                badge.className = `badge ${config.apiKeyConfigured ? 'b-success' : 'b-failed'}`;
-                document.getElementById('api-status').textContent =
-                    config.apiKeyConfigured ? 'مفتاح API مضبوط' : 'مفتاح API غير مضبوط';
+                const integrationReady = config.apiKeyConfigured && config.webhookSecretConfigured;
+                badge.className = `badge ${integrationReady ? 'b-success' : 'b-failed'}`;
+                document.getElementById('api-status').textContent = [
+                    config.apiKeyConfigured ? 'مفتاح ShipBee مضبوط' : 'مفتاح ShipBee غير مضبوط',
+                    config.webhookSecretConfigured ? 'سر Shopify Webhook مضبوط' :
+                        'SHOPIFY_WEBHOOK_SECRET غير مضبوط في Vercel'
+                ].join(' • ');
             } catch (error) {
                 document.getElementById('environment').textContent = 'تعذر معرفة البيئة';
                 document.getElementById('api-status').textContent = error.message;
