@@ -51,6 +51,80 @@ const SHIPPING_COMPANY_CODE = 'QATAR_POST';
 const SHIPBEE_SITE_ID = process.env.SHIPBEE_SITE_ID || 'express-staging';
 const CARRIER_RATE_CURRENCY = 'QAR';
 const PLANNED_SHIPPING_DAYS_AHEAD = 6;
+const TEST_RECIPIENT_PROFILES = [
+    {
+        id: 'qa-qatar',
+        label: 'قطر — الدوحة (بيانات خيالية)',
+        name: 'ShipBee QA Test - Qatar',
+        country: 'Qatar',
+        city: 'Doha',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '',
+        phone: '+97400000000',
+        email: 'shipbee-test-qatar@example.com'
+    },
+    {
+        id: 'qa-saudi',
+        label: 'السعودية — الرياض (بيانات خيالية)',
+        name: 'ShipBee QA Test - Saudi Arabia',
+        country: 'Saudi Arabia',
+        city: 'Riyadh',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '00000',
+        phone: '+966000000000',
+        email: 'shipbee-test-saudi@example.com'
+    },
+    {
+        id: 'qa-uae',
+        label: 'الإمارات — دبي (بيانات خيالية)',
+        name: 'ShipBee QA Test - UAE',
+        country: 'United Arab Emirates',
+        city: 'Dubai',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '',
+        phone: '+971000000000',
+        email: 'shipbee-test-uae@example.com'
+    },
+    {
+        id: 'qa-kuwait',
+        label: 'الكويت — مدينة الكويت (بيانات خيالية)',
+        name: 'ShipBee QA Test - Kuwait',
+        country: 'Kuwait',
+        city: 'Kuwait City',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '00000',
+        phone: '+96500000000',
+        email: 'shipbee-test-kuwait@example.com'
+    },
+    {
+        id: 'qa-bahrain',
+        label: 'البحرين — المنامة (بيانات خيالية)',
+        name: 'ShipBee QA Test - Bahrain',
+        country: 'Bahrain',
+        city: 'Manama',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '0000',
+        phone: '+97300000000',
+        email: 'shipbee-test-bahrain@example.com'
+    },
+    {
+        id: 'qa-oman',
+        label: 'عُمان — مسقط (بيانات خيالية)',
+        name: 'ShipBee QA Test - Oman',
+        country: 'Oman',
+        city: 'Muscat',
+        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+        address2: 'QA Test District',
+        zip: '00000',
+        phone: '+96800000000',
+        email: 'shipbee-test-oman@example.com'
+    }
+];
 
 function getPlannedShippingDate() {
     const date = new Date(Date.now() + (3 * 60 * 60 * 1000));
@@ -279,13 +353,10 @@ async function calculateCarrierRates(rate) {
         maxHeight = Math.max(maxHeight, dimensions.height);
     }
 
-    if (actualWeightKg <= 0 && totalVolumeCm3 <= 0) return [];
-    if (actualWeightKg <= 0) actualWeightKg = totalVolumeCm3 / VOLUMETRIC_DIVISOR;
+    if (actualWeightKg <= 0) return [];
 
     const length = Math.max(maxLength, totalVolumeCm3 / (maxWidth * maxHeight));
-    const volumetricWeightKg = (length * maxWidth * maxHeight) / VOLUMETRIC_DIVISOR;
-    const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg);
-    if (!Number.isFinite(chargeableWeightKg) || chargeableWeightKg <= 0) return [];
+    if (!Number.isFinite(actualWeightKg) || actualWeightKg <= 0) return [];
 
     const destinationCountry = rate.destination.country || rate.destination.country_code;
     const countryName = /^[A-Z]{2}$/i.test(destinationCountry) ?
@@ -302,7 +373,7 @@ async function calculateCarrierRates(rate) {
         city: rate.destination.city,
         zip: destinationZip
     }, {
-        chargeableWeightKg,
+        actualWeightKg,
         length,
         width: maxWidth,
         height: maxHeight
@@ -556,11 +627,6 @@ function getOrderWeightKg(order) {
     return itemWeightKg;
 }
 
-function calculateChargeableWeight(actualWeightKg, lengthCm, widthCm, heightCm) {
-    const volumetricWeightKg = (lengthCm * widthCm * heightCm) / VOLUMETRIC_DIVISOR;
-    return Math.max(actualWeightKg, volumetricWeightKg);
-}
-
 function getShippingRecipientName(address, customer) {
     const addressName = String(address && address.name || '').trim();
     const addressParts = [
@@ -610,7 +676,6 @@ function getOrderPackage(order) {
 
     return {
         actualWeightKg,
-        chargeableWeightKg: calculateChargeableWeight(actualWeightKg, length, width, height),
         length,
         width,
         height
@@ -626,7 +691,7 @@ async function getShippingQuote(address, packageDetails) {
         fromCity: SENDER.address.city,
         toCountry: address.country,
         toCity: address.city,
-        weight: packageDetails.chargeableWeightKg,
+        weight: packageDetails.actualWeightKg,
         length: packageDetails.length,
         width: packageDetails.width,
         height: packageDetails.height,
@@ -898,7 +963,7 @@ async function sendToShipBee(shopifyOrder) {
     } else {
         console.info('[shipbee-order] Skipping pricing endpoint for MONTHLY_BILL; using totalCost from ShipBee order response', {
             orderId: shopifyOrder.id,
-            weight: packageDetails.chargeableWeightKg
+            weight: packageDetails.actualWeightKg
         });
     }
 
@@ -913,7 +978,7 @@ async function sendToShipBee(shopifyOrder) {
         fromAddress: SENDER.address,
         shipment: {
             shippingCompany: SHIPPING_COMPANY,
-            weight: packageDetails.chargeableWeightKg,
+            weight: packageDetails.actualWeightKg,
             length: packageDetails.length,
             width: packageDetails.width,
             height: packageDetails.height,
@@ -945,6 +1010,20 @@ async function sendToShipBee(shopifyOrder) {
 
     let res;
     try {
+        // 🐛 DIAGNOSTIC: log the exact weight sent to ShipBee
+        console.log('[DIAGNOSTIC] ═══════════════════════════════════');
+        console.log('[DIAGNOSTIC] Order ID:', shopifyOrder.id);
+        console.log('[DIAGNOSTIC] packageDetails:', {
+            actualWeightKg: packageDetails.actualWeightKg,
+            length: packageDetails.length,
+            width: packageDetails.width,
+            height: packageDetails.height
+        });
+        console.log('[DIAGNOSTIC] Weight sent to /api/orders:', payload.shipment.weight);
+        console.log('[DIAGNOSTIC] Weight sent to /api/pricing/calculate:',
+            shippingQuoteDiagnostic && shippingQuoteDiagnostic.request ?
+                shippingQuoteDiagnostic.request.weight : 'N/A (quote was skipped)');
+        console.log('[DIAGNOSTIC] ═══════════════════════════════════');
         res = await axios.post(
             `${SHIPBEE_BASE_URL}/api/orders`,
             payload, {
@@ -1588,6 +1667,129 @@ app.get('/api/shipbee/pricing', requireDashboardAuth, (req, res) => {
     );
 });
 
+app.get('/api/shipbee/test-order/options', requireDashboardAuth, (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return res.json({
+        products: PRODUCT_PACKAGING_RECORDS.map((product, id) => ({
+            id,
+            sku: String(product.sku || ''),
+            name: String(product.name || ''),
+            weightKg: Number(product.weightKg),
+            length: Number(product.length),
+            width: Number(product.width),
+            height: Number(product.height)
+        })),
+        recipients: TEST_RECIPIENT_PROFILES.map(({ id, label }) => ({ id, label }))
+    });
+});
+
+app.post('/api/shipbee/test-order', requireDashboardAuth, async (req, res) => {
+    const body = req.body || {};
+    if (body.confirm !== 'SEND TEST ORDER') {
+        return res.status(400).json({
+            success: false,
+            message: 'تأكيد إرسال أوردر التيست غير صالح'
+        });
+    }
+
+    const productId = Number(body.productId);
+    if (!Number.isSafeInteger(productId) || String(productId) !== String(body.productId) ||
+        productId < 0 || productId >= PRODUCT_PACKAGING_RECORDS.length) {
+        return res.status(400).json({ success: false, message: 'المنتج المختار غير صالح' });
+    }
+
+    const product = PRODUCT_PACKAGING_RECORDS[productId];
+    const quantity = Number(body.quantity);
+    const unitPrice = Number(body.unitPrice);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+        return res.status(400).json({ success: false, message: 'الكمية يجب أن تكون من 1 إلى 10' });
+    }
+    if (!Number.isFinite(unitPrice) || unitPrice < 0.01 || unitPrice > 100000) {
+        return res.status(400).json({ success: false, message: 'قيمة الوحدة الجمركية يجب أن تكون 0.01 USD على الأقل' });
+    }
+    if (!product.name || !Number.isFinite(Number(product.weightKg)) || Number(product.weightKg) <= 0 ||
+        !['length', 'width', 'height'].every(field =>
+            Number.isFinite(Number(product[field])) && Number(product[field]) > 0
+        )) {
+        return res.status(400).json({ success: false, message: 'بيانات المنتج المختار ناقصة أو غير صالحة' });
+    }
+
+    const recipient = TEST_RECIPIENT_PROFILES.find(item => item.id === body.recipientId);
+    if (!recipient) {
+        return res.status(400).json({ success: false, message: 'العميل التجريبي المختار غير صالح' });
+    }
+    if (!SHIPBEE_API_KEY) {
+        return res.status(503).json({ success: false, message: 'SHIPBEE_API_KEY غير مضبوط' });
+    }
+
+    const orderId = `DASHBOARD-TEST-${Date.now()}`;
+    const normalizedUnitPrice = Math.round(unitPrice * 100) / 100;
+    const totalPrice = (normalizedUnitPrice * quantity).toFixed(2);
+    const item = {
+        title: product.name,
+        sku: product.sku || '',
+        quantity,
+        price: normalizedUnitPrice.toFixed(2),
+        total_discount: '0.00',
+        grams: Math.round(Number(product.weightKg) * 1000)
+    };
+    const testOrder = {
+        id: orderId,
+        order_number: orderId,
+        email: recipient.email,
+        phone: recipient.phone,
+        currency: 'USD',
+        current_subtotal_price: totalPrice,
+        subtotal_price: totalPrice,
+        total_weight: item.grams * quantity,
+        customer: {
+            name: recipient.name,
+            email: recipient.email
+        },
+        shipping_address: {
+            name: recipient.name,
+            address1: recipient.address1,
+            address2: recipient.address2,
+            city: recipient.city,
+            country: recipient.country,
+            zip: recipient.zip,
+            phone: recipient.phone,
+            company: 'SHIPBEE QA TEST ONLY'
+        },
+        line_items: [item]
+    };
+
+    try {
+        getProductPackaging(item);
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+
+    try {
+        const result = await sendToShipBee(testOrder);
+        const responseData = result.response && result.response.data;
+        return res.status(201).json({
+            success: true,
+            testOrder: true,
+            environment: getShipBeeEnvironment(),
+            product: { sku: item.sku, name: item.title, quantity },
+            recipient: recipient.label,
+            actualWeightKg: result.packageDetails.actualWeightKg,
+            shipbeeOrderNumber: responseData && responseData.orderNo || null,
+            response: result.response
+        });
+    } catch (error) {
+        console.error('[dashboard-test-order] ShipBee order creation failed:', error.message);
+        const integrationDiagnostic = error.integrationDiagnostic || null;
+        const status = integrationDiagnostic && integrationDiagnostic.httpStatus;
+        return res.status(Number.isInteger(status) && status >= 400 && status <= 599 ? status : 502).json({
+            success: false,
+            message: error.message,
+            integrationDiagnostic
+        });
+    }
+});
+
 app.get('/api/shipbee/countries', requireDashboardAuth, (req, res) =>
     handleShipBeeDashboardRequest(res, () => requestShipBee('GET', '/api/countries'))
 );
@@ -1698,7 +1900,8 @@ app.delete('/api/logs', requireDashboardAuth, async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
 });
-app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
+
+function getShipBeeEnvironment() {
     let environment = 'custom';
     try {
         const host = new URL(SHIPBEE_BASE_URL).hostname;
@@ -1707,8 +1910,12 @@ app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
     } catch (error) {
         console.error('Invalid SHIPBEE_BASE_URL:', error.message);
     }
+    return environment;
+}
+
+app.get('/api/shipbee/config', requireDashboardAuth, (req, res) => {
     res.json({
-        environment,
+        environment: getShipBeeEnvironment(),
         apiKeyConfigured: Boolean(SHIPBEE_API_KEY),
         webhookSecretConfigured: Boolean(WEBHOOK_SECRET)
     });

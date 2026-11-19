@@ -624,6 +624,7 @@
                 <button class="btn nav-btn" data-view="report">تقرير ShipBee</button>
                 <button class="btn nav-btn" data-view="lookup">حالة وتتبع شحنة</button>
                 <button class="btn nav-btn" data-view="pricing">حاسبة الأسعار</button>
+                <button class="btn nav-btn" data-view="test-order">أوردر تيست</button>
                 <button class="btn nav-btn" data-view="account">العناوين و Webhooks</button>
             </nav>
             <main class="main-content">
@@ -743,7 +744,7 @@
                             <div><label for="price-to-city">مدينة الوصول</label><input id="price-to-city" required></div>
                             <div><label for="price-to-postcode">الرمز البريدي للوصول</label><input id="price-to-postcode"></div>
                             <div><label for="price-district">الحي / المنطقة</label><input id="price-district"></div>
-                            <div><label for="price-weight">الوزن (kg)</label><input id="price-weight" type="number" min="0.01" step="0.01" required></div>
+                            <div><label for="price-weight">الوزن الفعلي (kg)</label><input id="price-weight" type="number" min="0.01" step="0.01" required><small>يُرسل الوزن الفعلي فقط؛ الأبعاد تُرسل منفصلة.</small></div>
                             <div><label for="price-length">الطول (cm)</label><input id="price-length" type="number" min="1" value="40" required></div>
                             <div><label for="price-width">العرض (cm)</label><input id="price-width" type="number" min="1" value="30" required></div>
                             <div><label for="price-height">الارتفاع (cm)</label><input id="price-height" type="number" min="1" value="20" required></div>
@@ -762,6 +763,21 @@
                             <button class="btn" type="submit">حساب السعر</button>
                         </form>
                         <pre id="pricing-output" class="output">أدخل بيانات المسار والوزن.</pre>
+                    </div>
+                </section>
+                <section id="view-test-order" class="view">
+                    <div class="panel">
+                        <h2>إرسال أوردر تيست إلى ShipBee</h2>
+                        <div class="warning">سيُنشأ طلب على بيئة ShipBee الحالية، وقد ينتج عنه شحن أو رسوم فعلية. بيانات العميل خيالية، وأرقام الهاتف تجريبية وقد ترفضها ShipBee. أدخل قيمة جمركية مناسبة للمنتج قبل الإرسال.</div>
+                        <form id="test-order-form" class="form-grid">
+                            <div><label for="test-order-product">المنتج من ملف المنتجات</label><select id="test-order-product" required disabled><option value="">تحميل المنتجات...</option></select></div>
+                            <div><label for="test-order-quantity">الكمية</label><input id="test-order-quantity" type="number" min="1" max="10" step="1" value="1" required></div>
+                            <div><label for="test-order-recipient">عميل تجريبي / دولة خليجية</label><select id="test-order-recipient" required disabled><option value="">تحميل بيانات الاختبار...</option></select></div>
+                            <div><label for="test-order-unit-price">قيمة الوحدة الجمركية (USD)</label><input id="test-order-unit-price" type="number" min="0.01" step="0.01" placeholder="أدخل قيمة المنتج" required></div>
+                            <p id="test-order-preview" class="muted" style="grid-column:1/-1">جارٍ تحميل المنتجات والعملاء التجريبيين...</p>
+                            <button id="test-order-submit" class="btn danger" type="submit" disabled>إرسال أوردر تيست</button>
+                        </form>
+                        <pre id="test-order-output" class="output">لم يتم إرسال أوردر تيست.</pre>
                     </div>
                 </section>
                 <section id="view-account" class="view">
@@ -802,6 +818,10 @@
         let currentLogs = [];
         let selectedOrderId = null;
         const hydratedOrders = new Map();
+        let testOrderProducts = [];
+        let testOrderRecipients = [];
+        let shipbeeEnvironment = null;
+        let testOrderSubmitting = false;
 
         function escapeHtml(value) {
             return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({
@@ -1148,7 +1168,7 @@
                 `${escapeHtml(packageDetails.length)} × ${escapeHtml(packageDetails.width)} × ${escapeHtml(packageDetails.height)} سم` :
                 'غير متوفر';
             const weights = packageDetails ?
-                `${escapeHtml(packageDetails.actualWeightKg)} كجم فعلي / ${escapeHtml(packageDetails.chargeableWeightKg)} كجم للفوترة` :
+                `${escapeHtml(packageDetails.actualWeightKg)} كجم — الوزن الفعلي المرسل` :
                 'غير متوفر';
             const quoteLabel = quote && quote.source === 'shipbee-order-response' ?
                 'سعر Qatar Post من رد ShipBee' : 'سعر Qatar Post';
@@ -1313,8 +1333,9 @@
         async function loadEnvironment() {
             try {
                 const config = await apiRequest('/api/shipbee/config');
+                shipbeeEnvironment = String(config.environment || 'custom');
                 const badge = document.getElementById('environment');
-                badge.textContent = `ShipBee: ${config.environment}`;
+                badge.textContent = `ShipBee: ${shipbeeEnvironment}`;
                 const integrationReady = config.apiKeyConfigured && config.webhookSecretConfigured;
                 badge.className = `badge ${integrationReady ? 'b-success' : 'b-failed'}`;
                 document.getElementById('api-status').textContent = [
@@ -1322,10 +1343,77 @@
                     config.webhookSecretConfigured ? 'سر Shopify Webhook مضبوط' :
                         'SHOPIFY_WEBHOOK_SECRET غير مضبوط في Vercel'
                 ].join(' • ');
+                updateTestOrderSubmitState();
             } catch (error) {
+                shipbeeEnvironment = null;
                 document.getElementById('environment').textContent = 'تعذر معرفة البيئة';
                 document.getElementById('api-status').textContent = error.message;
+                updateTestOrderSubmitState();
             }
+        }
+
+        function updateTestOrderSubmitState() {
+            const submitButton = document.getElementById('test-order-submit');
+            if (submitButton) {
+                submitButton.disabled = testOrderSubmitting ||
+                    !testOrderProducts.length || !testOrderRecipients.length ||
+                    !shipbeeEnvironment;
+            }
+        }
+
+        function updateTestOrderPreview() {
+            const product = testOrderProducts.find(item =>
+                String(item.id) === document.getElementById('test-order-product').value);
+            const recipient = testOrderRecipients.find(item =>
+                item.id === document.getElementById('test-order-recipient').value);
+            const preview = document.getElementById('test-order-preview');
+            if (!product || !recipient) {
+                preview.textContent = 'اختر منتجًا وعميلًا تجريبيًا لعرض ملخص الشحنة.';
+                return;
+            }
+
+            const quantity = Number(document.getElementById('test-order-quantity').value || 1);
+            const totalWeightKg = Number((product.weightKg * quantity).toFixed(3));
+            const unitPrice = Number(document.getElementById('test-order-unit-price').value);
+            const totalValue = Number.isFinite(unitPrice) && unitPrice > 0 ?
+                ` — القيمة الجمركية: ${(unitPrice * quantity).toFixed(2)} USD` : '';
+            preview.textContent =
+                `${product.name} — الوزن الفعلي الإجمالي: ${totalWeightKg} kg — ` +
+                `الأبعاد: ${product.length} × ${product.width} × ${product.height} cm — ` +
+                `الوجهة: ${recipient.label}${totalValue}. لن يُستخدم الوزن الحجمي.`;
+        }
+
+        async function loadTestOrderOptions() {
+            const productSelect = document.getElementById('test-order-product');
+            const recipientSelect = document.getElementById('test-order-recipient');
+            try {
+                const options = await apiRequest('/api/shipbee/test-order/options');
+                if (!Array.isArray(options.products) || !Array.isArray(options.recipients)) {
+                    throw new Error('استجابة خيارات أوردر التيست غير صالحة');
+                }
+
+                testOrderProducts = options.products;
+                testOrderRecipients = options.recipients;
+                productSelect.innerHTML = '<option value="">اختر المنتج</option>' +
+                    testOrderProducts.map(product =>
+                        `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)} ` +
+                        `(${escapeHtml(product.sku || 'بدون SKU')} — ${escapeHtml(product.weightKg)} kg)</option>`
+                    ).join('');
+                recipientSelect.innerHTML = '<option value="">اختر العميل والوجهة</option>' +
+                    testOrderRecipients.map(recipient =>
+                        `<option value="${escapeHtml(recipient.id)}">${escapeHtml(recipient.label)}</option>`
+                    ).join('');
+                productSelect.disabled = !testOrderProducts.length;
+                recipientSelect.disabled = !testOrderRecipients.length;
+                if (!testOrderProducts.length || !testOrderRecipients.length) {
+                    throw new Error('لا توجد منتجات أو وجهات تجريبية صالحة');
+                }
+                updateTestOrderPreview();
+            } catch (error) {
+                document.getElementById('test-order-output').textContent =
+                    `تعذر تحميل خيارات أوردر التيست: ${error.message}`;
+            }
+            updateTestOrderSubmitState();
         }
 
         async function loadLogs() {
@@ -1547,6 +1635,58 @@
             });
         });
 
+        document.getElementById('test-order-product').addEventListener('change', updateTestOrderPreview);
+        document.getElementById('test-order-recipient').addEventListener('change', updateTestOrderPreview);
+        document.getElementById('test-order-quantity').addEventListener('input', updateTestOrderPreview);
+        document.getElementById('test-order-unit-price').addEventListener('input', updateTestOrderPreview);
+        document.getElementById('test-order-form').addEventListener('submit', event => {
+            event.preventDefault();
+            if (testOrderSubmitting) return;
+
+            const product = testOrderProducts.find(item =>
+                String(item.id) === document.getElementById('test-order-product').value);
+            const recipient = testOrderRecipients.find(item =>
+                item.id === document.getElementById('test-order-recipient').value);
+            const quantity = Number(document.getElementById('test-order-quantity').value);
+            const unitPrice = Number(document.getElementById('test-order-unit-price').value);
+            const environment = shipbeeEnvironment || 'غير معروفة';
+            if (!product || !recipient) {
+                document.getElementById('test-order-output').textContent = 'اختر المنتج والعميل التجريبي أولًا.';
+                return;
+            }
+
+            const confirmation = `سيتم إرسال أوردر فعلي إلى ShipBee (${environment}) باستخدام بيانات عميل خيالية. قد ينشأ عنه شحن أو رسوم. المنتج: ${product.name}، الوجهة: ${recipient.label}. متابعة؟`;
+            if (!confirm(confirmation)) {
+                document.getElementById('test-order-output').textContent = 'تم إلغاء الإرسال.';
+                return;
+            }
+            if (environment === 'production' && prompt('أنت على بيئة Production. اكتب SEND TEST ORDER للتأكيد:') !== 'SEND TEST ORDER') {
+                document.getElementById('test-order-output').textContent = 'لم يتم التأكيد؛ لم يُرسل الطلب.';
+                return;
+            }
+
+            testOrderSubmitting = true;
+            updateTestOrderSubmitState();
+            runForm(event.currentTarget, 'test-order-output', async () => {
+                try {
+                    return await apiRequest('/api/shipbee/test-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            productId: product.id,
+                            recipientId: recipient.id,
+                            quantity,
+                            unitPrice,
+                            confirm: 'SEND TEST ORDER'
+                        })
+                    });
+                } finally {
+                    testOrderSubmitting = false;
+                    updateTestOrderSubmitState();
+                }
+            });
+        });
+
         document.getElementById('webhook-register-form').addEventListener('submit', event => {
             event.preventDefault();
             runForm(event.currentTarget, 'webhooks-output', async () => {
@@ -1580,6 +1720,7 @@
         });
 
         loadEnvironment();
+        loadTestOrderOptions();
         loadLogs();
         loadAccountData();
         loadReferenceData('countries');
