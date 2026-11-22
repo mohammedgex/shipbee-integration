@@ -16,7 +16,10 @@ app.use(express.json({
 // ==========================================
 const SHIPBEE_API_KEY = process.env.SHIPBEE_API_KEY;
 const SHIPBEE_BASE_URL = (process.env.SHIPBEE_BASE_URL || 'https://api.staging.shipbee.io').replace(/\/+$/, '');
-const SHOPIFY_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
+const SHOPIFY_DOMAIN = String(process.env.SHOPIFY_STORE_DOMAIN || '')
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/+$/, '');
 const SHOPIFY_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01';
 const WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 const DASHBOARD_USERNAME = process.env.DASHBOARD_USERNAME;
@@ -779,7 +782,17 @@ function extractBuildingNumber(addr) {
 let cachedToken = process.env.SHOPIFY_ACCESS_TOKEN;
 let tokenExpiresAt = 0; // 0 = استخدم الـ env var مباشرة
 
+function validateShopifyDomain() {
+    if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(SHOPIFY_DOMAIN)) {
+        throw new Error(
+            'SHOPIFY_STORE_DOMAIN must be the canonical store-name.myshopify.com host, without a path. Do not use an admin.shopify.com/store/... URL.'
+        );
+    }
+}
+
 async function getShopifyToken(forceRefresh = false) {
+    validateShopifyDomain();
+
     // لو الـ token الحالي لسه صالح، رجّعه
     if (!forceRefresh && cachedToken && Date.now() < tokenExpiresAt) {
         return cachedToken;
@@ -810,10 +823,23 @@ async function getShopifyToken(forceRefresh = false) {
         console.log('🔄 تم تجديد Shopify token تلقائياً، صالح حتى ' + new Date(tokenExpiresAt).toISOString());
         return cachedToken;
     } catch (e) {
-        console.error('فشل تجديد التوكن:', e.response ? e.response.data : e.message);
+        const responseData = e.response && e.response.data;
+        const htmlResponse = typeof responseData === 'string' &&
+            /<!doctype html|<html[\s>]/i.test(responseData);
+        console.error('فشل تجديد Shopify token:', htmlResponse ?
+            'Shopify returned an HTML verification page instead of JSON' :
+            responseData || e.message);
         // لو فشل، استخدم الـ cached لو موجود
         if (cachedToken) return cachedToken;
-        throw new Error('فشل الحصول على Shopify token: ' + (e.response ? JSON.stringify(e.response.data) : e.message));
+        if (htmlResponse) {
+            throw new Error(
+                'Shopify returned an HTML verification page for the token request. Set SHOPIFY_STORE_DOMAIN to the canonical store-name.myshopify.com host, not an admin.shopify.com/store/... URL.'
+            );
+        }
+        const errorDetails = responseData ?
+            (typeof responseData === 'string' ? responseData : JSON.stringify(responseData)) :
+            e.message;
+        throw new Error('فشل الحصول على Shopify token: ' + String(errorDetails).slice(0, 500));
     }
 }
 
