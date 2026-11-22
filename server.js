@@ -1852,6 +1852,39 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
         }
         );
     } catch (error) {
+        if (error.response && error.response.status === 404) {
+            const orderLogs = (await getLogs()).filter(log =>
+                String(log.orderId) === orderId
+            );
+            const summaryLog = orderLogs.find(log => log.orderSummary) || orderLogs[0];
+            if (summaryLog) {
+                const summary = summaryLog.orderSummary || {};
+                const packageLog = orderLogs.find(log => log.packageDetails);
+                const quoteLog = orderLogs.find(log => log.shippingQuote);
+                return res.json({
+                    success: true,
+                    shopifyAvailable: false,
+                    orderId,
+                    orderNumber: summaryLog.orderNumber || null,
+                    customerName: summary.customerName || summaryLog.customer || null,
+                    total: summaryLog.total || null,
+                    currency: summaryLog.currency || null,
+                    city: summaryLog.city || '',
+                    country: summaryLog.country || '',
+                    items: Array.isArray(summary.items) ? summary.items : [],
+                    shippingLines: Array.isArray(summary.shippingLines) ? summary.shippingLines : [],
+                    packageDetails: packageLog && packageLog.packageDetails || null,
+                    packageError: null,
+                    shippingQuote: quoteLog && quoteLog.shippingQuote || null,
+                    quoteError: null,
+                    quoteDiagnostic: null
+                });
+            }
+            return res.status(404).json({
+                success: false,
+                message: 'Shopify returned 404 for this order, and no saved integration details are available. Verify SHOPIFY_STORE_DOMAIN and the order ID. For orders older than 60 days, grant read_all_orders in addition to read_orders, then reauthorize the Shopify app and update its access token.'
+            });
+        }
         const message = describeAxiosError(error, 'Shopify GET order details');
         return res.status(error.response ? 502 : 503).json({ success: false, message });
     }
@@ -1945,6 +1978,12 @@ app.post('/api/shipbee/orders/:orderId/retry', requireDashboardAuth, async (req,
             }
         );
     } catch (error) {
+        if (error.response && error.response.status === 404) {
+            return res.status(404).json({
+                success: false,
+                message: 'Shopify could not find this order in the configured store. Verify SHOPIFY_STORE_DOMAIN and the order ID. For orders older than 60 days, grant read_all_orders in addition to read_orders, then reauthorize the Shopify app and update its access token.'
+            });
+        }
         const message = describeAxiosError(error, 'Shopify GET order for retry');
         return res.status(error.response ? 502 : 503).json({ success: false, message });
     }
