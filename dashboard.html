@@ -1,1731 +1,689 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>ShipBee Express — لوحة الإدارة</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0
-        }
-        
-        body {
-            font-family: "Noto Sans Arabic", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            padding: 24px
-        }
-        
-        .container {
-            max-width: 1500px;
-            margin: 0 auto
-        }
-        
-        h1 {
-            color: #38bdf8;
-            margin-bottom: 8px
-        }
-        
-        .sub {
-            color: #64748b;
-            margin-bottom: 24px;
-            font-size: 14px
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
-            margin-bottom: 24px
-        }
-        
-        .stat {
-            background: #1e293b;
-            padding: 18px;
-            border-radius: 10px;
-            border-right: 4px solid #38bdf8
-        }
-        
-        .stat.success {
-            border-color: #22c55e
-        }
-        
-        .stat.failed {
-            border-color: #ef4444
-        }
-        
-        .stat.pending {
-            border-color: #f59e0b
-        }
-        
-        .stat-val {
-            font-size: 2em;
-            font-weight: 700;
-            color: #f1f5f9
-        }
-        
-        .stat.success .stat-val {
-            color: #22c55e
-        }
-        
-        .stat.failed .stat-val {
-            color: #ef4444
-        }
-        
-        .stat.pending .stat-val {
-            color: #f59e0b
-        }
-        
-        .stat-lbl {
-            color: #94a3b8;
-            font-size: 13px;
-            margin-top: 4px
-        }
-        
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 14px;
-            flex-wrap: wrap
-        }
-        
-        .btn {
-            background: #334155;
-            color: #e2e8f0;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px
-        }
-        
-        .btn:hover {
-            background: #475569
-        }
-        
-        .btn.danger {
-            background: #7f1d1d
-        }
-        
-        .btn.danger:hover {
-            background: #991b1b
-        }
-        
-        table {
-            width: 100%;
-            background: #1e293b;
-            border-radius: 10px;
-            overflow: hidden;
-            border-collapse: collapse
-        }
-        
-        th {
-            background: #334155;
-            padding: 12px;
-            text-align: right;
-            font-size: 13px;
-            color: #cbd5e1
-        }
-        
-        td {
-            padding: 12px;
-            border-top: 1px solid #334155;
-            font-size: 13px
-        }
-        
-        tr.main-row:hover {
-            background: #334155;
-            cursor: pointer
-        }
-        
-        .badge {
-            padding: 3px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 600;
-            display: inline-block
-        }
-        
-        .b-success {
-            background: #14532d;
-            color: #22c55e
-        }
-        
-        .b-failed {
-            background: #7f1d1d;
-            color: #ef4444
-        }
-        
-        .b-pending {
-            background: #78350f;
-            color: #f59e0b
-        }
-        
-        .b-info {
-            background: #1e3a8a;
-            color: #93c5fd
-        }
-        
-        .detail {
-            display: none;
-            background: #0f172a
-        }
-        
-        .detail.open {
-            display: table-row
-        }
-        
-        .detail td {
-            padding: 16px
-        }
-        
-        .section-title {
-            color: #38bdf8;
-            font-size: 12px;
-            margin-bottom: 6px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
-        
-        pre {
-            background: #020617;
-            padding: 12px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            white-space: pre-wrap;
-            word-break: break-all;
-            max-height: 350px;
-            overflow: auto;
-            margin-bottom: 14px;
-            border: 1px solid #1e293b
-        }
-        
-        .copy-btn {
-            background: #1e40af;
-            color: #fff;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            margin-bottom: 6px
-        }
-        
-        .empty {
-            text-align: center;
-            padding: 40px;
-            color: #64748b
-        }
-        
-        .time {
-            color: #64748b;
-            font-size: 12px
-        }
-        
-        .refresh-tag {
-            color: #22c55e;
-            font-size: 12px;
-            margin-right: 8px
-        }
-        
-        .layout {
-            display: grid;
-            grid-template-columns: 220px minmax(0, 1fr);
-            gap: 20px;
-            align-items: start
-        }
-        
-        .sidebar,
-        .panel,
-        .topbar {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px
-        }
-        
-        .sidebar {
-            position: sticky;
-            top: 16px;
-            padding: 12px
-        }
-        
-        .nav-btn {
-            display: block;
-            width: 100%;
-            text-align: right;
-            margin: 4px 0
-        }
-        
-        .nav-btn.active {
-            background: #075985
-        }
-        
-        .main-content {
-            min-width: 0
-        }
-        
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 16px 20px;
-            margin-bottom: 16px
-        }
-        
-        .panel {
-            padding: 20px;
-            margin-bottom: 16px
-        }
-        
-        .panel h2 {
-            color: #7dd3fc;
-            margin-bottom: 14px;
-            font-size: 19px
-        }
-        
-        .view {
-            display: none
-        }
-        
-        .view.active {
-            display: block
-        }
-        
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            align-items: end
-        }
-        
-        label {
-            display: block;
-            color: #cbd5e1;
-            font-size: 13px;
-            margin-bottom: 5px
-        }
-        
-        input,
-        select {
-            width: 100%;
-            color: #e2e8f0;
-            background: #0f172a;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            padding: 10px;
-            min-height: 38px
-        }
-        
-        pre.output {
-            margin-top: 14px;
-            color: #cbd5e1;
-            max-height: 520px
-        }
-        
-        .muted {
-            color: #94a3b8;
-            font-size: 13px
-        }
-        
-        .warning {
-            color: #fbbf24;
-            border-right: 3px solid #f59e0b;
-            padding: 10px 12px;
-            background: #422006;
-            margin-bottom: 14px;
-            border-radius: 6px
-        }
-        
-        .table-wrap {
-            overflow-x: auto
-        }
-        
-        .table-wrap table {
-            min-width: 720px
-        }
-        
-        .order-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 12px;
-            margin-top: 16px
-        }
-        
-        .order-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 14px
-        }
-        
-        .order-card strong {
-            display: block;
-            color: #7dd3fc;
-            font-size: 12px;
-            margin-bottom: 6px
-        }
-        
-        .order-card span {
-            font-size: 16px;
-            font-weight: 600
-        }
-        
-        .order-note {
-            margin-top: 12px;
-            color: #fbbf24;
-            font-size: 13px
-        }
-        
-        .order-items {
-            min-width: 0 !important;
-            margin-top: 14px
-        }
-        
-        .order-items th,
-        .order-items td {
-            padding: 9px
-        }
-        
-         :root {
-            color-scheme: dark;
-            --page: #17191b;
-            --surface: #202326;
-            --surface-raised: #282c30;
-            --surface-hover: #30353a;
-            --border: #3a3f44;
-            --text: #e4e6e8;
-            --muted: #a1a6ab;
-            --accent: #aab4be;
-            --success: #a6b8aa;
-            --danger: #c49a9a;
-            --pending: #c2b18e
-        }
-        
-        *,
-        *::before,
-        *::after {
-            box-shadow: none !important;
-            background-image: none !important
-        }
-        
-        body {
-            font-family: "Noto Sans Arabic", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
-            background: var(--page);
-            color: var(--text);
-            line-height: 1.75
-        }
-        
-        h1,
-        .panel h2,
-        .section-title,
-        .order-card strong,
-        #log-details h3 {
-            color: var(--accent)
-        }
-        
-        .sub,
-        .muted,
-        .stat-lbl,
-        .time,
-        .empty {
-            color: var(--muted)
-        }
-        
-        .sidebar,
-        .panel,
-        .topbar,
-        .stat,
-        .order-card,
-        table {
-            background: var(--surface);
-            border-color: var(--border);
-            border-radius: 8px
-        }
-        
-        .stat {
-            border-right-width: 3px;
-            border-right-color: var(--accent)
-        }
-        
-        .stat.success,
-        .stat.failed,
-        .stat.pending {
-            border-color: var(--border)
-        }
-        
-        .stat.success {
-            border-right-color: var(--success)
-        }
-        
-        .stat.failed {
-            border-right-color: var(--danger)
-        }
-        
-        .stat.pending {
-            border-right-color: var(--pending)
-        }
-        
-        .stat-val,
-        .stat.success .stat-val,
-        .stat.failed .stat-val,
-        .stat.pending .stat-val {
-            color: var(--text)
-        }
-        
-        .btn {
-            background: var(--surface-raised);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-family: inherit;
-            transition: background-color 120ms ease
-        }
-        
-        .btn:hover,
-        tr.main-row:hover {
-            background: var(--surface-hover)
-        }
-        
-        .btn.danger {
-            background: #38292a;
-            color: #dec1c1;
-            border-color: #594143
-        }
-        
-        .btn.danger:hover {
-            background: #453234
-        }
-        
-        .btn:focus-visible,
-        input:focus-visible,
-        select:focus-visible {
-            outline: 2px solid #87939e;
-            outline-offset: 2px
-        }
-        
-        .nav-btn.active {
-            background: #343a40;
-            color: #f0f1f2;
-            border-color: #4a5158
-        }
-        
-        th {
-            background: var(--surface-raised);
-            color: #d3d6d9
-        }
-        
-        td {
-            border-color: var(--border)
-        }
-        
-        .b-success {
-            background: #29332c;
-            color: #b7c8bb
-        }
-        
-        .b-failed {
-            background: #392b2c;
-            color: #d2aaaa
-        }
-        
-        .b-pending {
-            background: #373329;
-            color: #d0c09d
-        }
-        
-        .b-info {
-            background: #2b3035;
-            color: #bdc5cc
-        }
-        
-        pre {
-            background: #191b1d;
-            color: #d4d7da;
-            border-color: var(--border);
-            border-radius: 6px
-        }
-        
-        .copy-btn {
-            background: #394047;
-            color: var(--text)
-        }
-        
-        input,
-        select {
-            color: var(--text);
-            background: #191b1d;
-            border-color: #454b51;
-            border-radius: 6px;
-            font: inherit
-        }
-        
-        label {
-            color: #d0d3d6
-        }
-        
-        .warning {
-            color: #d0c09d;
-            border-color: #867852;
-            background: #302d25
-        }
-        
-        .order-card {
-            background: #1b1e20
-        }
-        
-        .order-note {
-            color: #b8ad96
-        }
-        
-        .detail {
-            background: var(--page)
-        }
-        
-        @media (max-width: 760px) {
-            body {
-                padding: 12px
-            }
-            .layout {
-                grid-template-columns: 1fr
-            }
-            .sidebar {
-                position: static;
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-            .topbar {
-                align-items: flex-start;
-                flex-direction: column
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShipBee Express Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f5f7f9;
+      --surface: #ffffff;
+      --surface-2: #eef2f4;
+      --border: #dfe5e8;
+      --text: #182126;
+      --muted: #6b7880;
+      --accent: #147d64;
+      --accent-strong: #0e6652;
+      --danger: #bd3e46;
+      --danger-soft: #fff1f2;
+      --warning: #9a6700;
+      --warning-soft: #fff7df;
+    }
+    * { box-sizing: border-box; box-shadow: none !important; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select { font: inherit; }
+    .shell { max-width: 1500px; margin: 0 auto; padding: 24px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+    .subtitle { margin: 4px 0 0; color: var(--muted); }
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; }
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      height: fit-content;
+      display: grid;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .nav-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .nav-btn:hover { background: var(--surface-2); color: var(--text); }
+    .nav-btn.active { background: #dfeee8; color: var(--accent-strong); }
+    .view { display: none; }
+    .view.active { display: block; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    h2, h3 { margin: 0; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .stat-value { font-size: 30px; line-height: 1; font-weight: 800; }
+    .stat-label { margin-top: 7px; color: var(--muted); font-size: 13px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn.primary:hover { background: var(--accent-strong); }
+    .btn.danger { background: var(--danger-soft); border-color: #edbcc0; color: var(--danger); }
+    .btn.small { padding: 6px 9px; font-size: 12px; }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .b-success { background: #dff3e9; color: #116248; }
+    .b-failed { background: #fde8ea; color: #9e3037; }
+    .b-pending { background: #fff1c9; color: #806000; }
+    .b-info { background: #e8eef2; color: #526574; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: left;
+      padding: 10px;
+      white-space: nowrap;
+    }
+    td { border-top: 1px solid var(--border); padding: 11px 10px; font-size: 13px; vertical-align: middle; }
+    tbody tr.order-row { cursor: pointer; }
+    tbody tr.order-row:hover { background: #f8fafb; }
+    .actions { display: flex; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    label { display: block; color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 9px 10px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #77a999; }
+    .muted { color: var(--muted); }
+    .empty { text-align: center; padding: 34px; color: var(--muted); }
+    pre {
+      margin: 12px 0 0;
+      max-height: 420px;
+      overflow: auto;
+      background: #f7f9fa;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+    .details-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .info-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; min-width: 0; }
+    .info-card strong { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+    .warning { border: 1px solid #eadba8; background: var(--warning-soft); color: var(--warning); border-radius: 8px; padding: 10px 12px; margin: 12px 0 0; }
+    .retry-box { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 14px; background: #fafbfb; }
+    .retry-box .form-grid { grid-template-columns: repeat(4, minmax(120px, 1fr)) auto; }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--accent-strong); font-weight: 800; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 620px) {
+      .shell { padding: 12px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .details-grid, .form-grid, .retry-box .form-grid { grid-template-columns: 1fr; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
 </head>
-
 <body>
-    <div class="container">
-        <div class="topbar">
-            <div>
-                <h1>ShipBee Express — لوحة الإدارة</h1>
-                <p class="sub">متابعة التكامل، الشحنات، الأسعار وإعدادات الحساب</p>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <h1>ShipBee Express</h1>
+        <p class="subtitle">Integration dashboard</p>
+      </div>
+      <div class="toolbar">
+        <span id="environment" class="badge b-info">Loading environment...</span>
+        <span id="api-status" class="muted"></span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="Dashboard sections">
+        <button class="nav-btn active" data-view="overview">Overview</button>
+        <button class="nav-btn" data-view="orders">Orders</button>
+        <button class="nav-btn" data-view="report">ShipBee Report</button>
+        <button class="nav-btn" data-view="lookup">Shipment Lookup</button>
+        <button class="nav-btn" data-view="pricing">Pricing</button>
+        <button class="nav-btn" data-view="test-order">Test Order</button>
+        <button class="nav-btn" data-view="account">Account</button>
+      </nav>
+
+      <main>
+        <section id="view-overview" class="view active">
+          <div class="stats">
+            <div class="stat"><div id="s-total" class="stat-value">0</div><div class="stat-label">Integration records</div></div>
+            <div class="stat"><div id="s-success" class="stat-value">0</div><div class="stat-label">Successful</div></div>
+            <div class="stat"><div id="s-failed" class="stat-value">0</div><div class="stat-label">Failed</div></div>
+            <div class="stat"><div id="s-pending" class="stat-value">0</div><div class="stat-label">Processing</div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>ShipBee Account Summary</h2><button class="btn" onclick="loadLogs()">Refresh</button></div>
+            <p class="muted">Review Shopify and ShipBee order activity, edit failed shipment dimensions, and retry or cancel from one place.</p>
+          </div>
+        </section>
+
+        <section id="view-orders" class="view">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>Shopify to ShipBee Orders</h2><p class="muted" style="margin:4px 0 0">Select an order to review it or adjust dimensions.</p></div>
+              <div class="toolbar">
+                <button class="btn" onclick="loadLogs()">Refresh</button>
+                <button class="btn danger" onclick="clearLogs()">Clear logs</button>
+              </div>
             </div>
-            <div>
-                <span id="environment" class="badge b-info">تحميل البيئة...</span>
-                <span id="api-status" class="muted"></span>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Time</th><th>Order</th><th>Customer</th><th>Destination</th><th>Total</th><th>Carrier Quote</th><th>Status</th><th>Tracking</th><th>Actions</th></tr></thead>
+                <tbody id="tbody"><tr><td colspan="9" class="empty">Loading...</td></tr></tbody>
+              </table>
             </div>
-        </div>
-        <div class="layout">
-            <nav class="sidebar" aria-label="أقسام لوحة التحكم">
-                <button class="btn nav-btn active" data-view="overview">نظرة عامة</button>
-                <button class="btn nav-btn" data-view="integration">طلبات التكامل</button>
-                <button class="btn nav-btn" data-view="report">تقرير ShipBee</button>
-                <button class="btn nav-btn" data-view="lookup">حالة وتتبع شحنة</button>
-                <button class="btn nav-btn" data-view="pricing">حاسبة الأسعار</button>
-                <button class="btn nav-btn" data-view="test-order">أوردر تيست</button>
-                <button class="btn nav-btn" data-view="account">العناوين و Webhooks</button>
-            </nav>
-            <main class="main-content">
-                <section id="view-overview" class="view active">
-                    <div class="stats">
-                        <div class="stat">
-                            <div class="stat-val" id="s-total">0</div>
-                            <div class="stat-lbl">سجلات التكامل</div>
-                        </div>
-                        <div class="stat success">
-                            <div class="stat-val" id="s-success">0</div>
-                            <div class="stat-lbl">نجاح</div>
-                        </div>
-                        <div class="stat failed">
-                            <div class="stat-val" id="s-failed">0</div>
-                            <div class="stat-lbl">فشل</div>
-                        </div>
-                        <div class="stat pending">
-                            <div class="stat-val" id="s-pending">0</div>
-                            <div class="stat-lbl">قيد المعالجة</div>
-                        </div>
-                    </div>
-                    <div class="panel">
-                        <h2>ملخص حساب ShipBee</h2>
-                        <p class="muted">اختر فترة لجلب التقرير الرسمي. الرصيد وحد الائتمان غير متاحين عبر API الحالية.</p>
-                        <form id="overview-report-form" class="form-grid">
-                            <div><label for="overview-start">من تاريخ</label><input id="overview-start" name="startDate" type="date" required></div>
-                            <div><label for="overview-end">إلى تاريخ</label><input id="overview-end" name="endDate" type="date" required></div>
-                            <button class="btn" type="submit">تحميل الملخص</button>
-                        </form>
-                        <pre id="overview-report" class="output">لم يتم تحميل التقرير بعد.</pre>
-                    </div>
-                    <div class="panel">
-                        <h2>روابط مباشرة</h2>
-                        <div class="toolbar">
-                            <button class="btn" onclick="loadLogs()">تحديث سجلات التكامل</button>
-                            <button class="btn" onclick="loadAccountData()">تحديث بيانات الحساب</button>
-                            <a class="btn" href="https://api.staging.shipbee.io/api-docs/#/" target="_blank" rel="noopener noreferrer">توثيق ShipBee</a>
-                        </div>
-                    </div>
-                </section>
-                <section id="view-integration" class="view">
-                    <div class="panel">
-                        <h2>سجلات Shopify ↔ ShipBee</h2>
-                        <p class="muted">اضغط على أي طلب لتشاهد المنتجات والمبالغ ووزن الشحنة وسعر Qatar Post بطريقة مبسطة.</p>
-                        <div class="toolbar">
-                            <button class="btn" onclick="loadLogs()">تحديث</button>
-                            <button class="btn danger" onclick="clearLogs()">مسح السجلات المحلية</button>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>الوقت</th>
-                                        <th>الطلب</th>
-                                        <th>العميل</th>
-                                        <th>الدولة</th>
-                                        <th>إجمالي الطلب</th>
-                                        <th>شحن Qatar Post</th>
-                                        <th>الحالة</th>
-                                        <th>التتبع</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody">
-                                    <tr>
-                                        <td colspan="8" class="empty">جاري التحميل...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="log-details" class="muted" style="margin-top:16px">اختر طلبًا من الجدول لعرض ملخصه.</div>
-                    </div>
-                </section>
-                <section id="view-report" class="view">
-                    <div class="panel">
-                        <h2>تقرير الطلبات من ShipBee</h2>
-                        <form id="report-form" class="form-grid">
-                            <div><label for="report-start">من تاريخ</label><input id="report-start" name="startDate" type="date" required></div>
-                            <div><label for="report-end">إلى تاريخ</label><input id="report-end" name="endDate" type="date" required></div>
-                            <button class="btn" type="submit">جلب التقرير</button>
-                        </form>
-                        <pre id="report-output" class="output">أدخل الفترة ثم اضغط جلب.</pre>
-                    </div>
-                </section>
-                <section id="view-lookup" class="view">
-                    <div class="panel">
-                        <h2>حالة الطلب وأحداث التتبع</h2>
-                        <form id="lookup-form" class="form-grid">
-                            <div><label for="lookup-kind">نوع البحث</label><select id="lookup-kind">
-                                <option value="orderNo">رقم طلب ShipBee</option><option value="orderId">معرّف الطلب</option>
-                                <option value="trackingNumber">رقم التتبع</option><option value="awb">AWB</option>
-                            </select></div>
-                            <div><label for="lookup-value">القيمة</label><input id="lookup-value" required></div>
-                            <label><input id="lookup-refresh" type="checkbox" style="width:auto;min-height:0"> تحديث مباشر من الناقل (أبطأ)</label>
-                            <button class="btn" type="submit">جلب الحالة والتتبع</button>
-                        </form>
-                        <pre id="lookup-output" class="output">أدخل رقم الطلب أو التتبع.</pre>
-                    </div>
-                    <div class="panel">
-                        <h2>إلغاء طلب ShipBee</h2>
-                        <div class="warning">الإلغاء يؤثر في الطلب الحقيقي على البيئة الحالية. بعد حجز الناقل قد لا يوقف الشحنة أو يلغي رسومها.</div>
-                        <form id="cancel-form" class="form-grid">
-                            <div><label for="cancel-order-no">رقم طلب ShipBee</label><input id="cancel-order-no" inputmode="numeric" required></div>
-                            <button class="btn danger" type="submit">إلغاء الطلب</button>
-                        </form>
-                        <pre id="cancel-output" class="output">لا توجد عملية إلغاء.</pre>
-                    </div>
-                </section>
-                <section id="view-pricing" class="view">
-                    <div class="panel">
-                        <h2>حاسبة أسعار الشحن الدولي</h2>
-                        <form id="pricing-form" class="form-grid">
-                            <div><label for="price-from-country">بلد الإرسال</label><input id="price-from-country" value="Qatar" required></div>
-                            <div><label for="price-from-city">مدينة الإرسال</label><input id="price-from-city" value="Lusail" required></div>
-                            <div><label for="price-from-postcode">الرمز البريدي للإرسال</label><input id="price-from-postcode"></div>
-                            <div><label for="price-to-country">بلد الوصول</label><input id="price-to-country" required></div>
-                            <div><label for="price-to-city">مدينة الوصول</label><input id="price-to-city" required></div>
-                            <div><label for="price-to-postcode">الرمز البريدي للوصول</label><input id="price-to-postcode"></div>
-                            <div><label for="price-district">الحي / المنطقة</label><input id="price-district"></div>
-                            <div><label for="price-weight">الوزن الفعلي (kg)</label><input id="price-weight" type="number" min="0.01" step="0.01" required><small>يُرسل الوزن الفعلي فقط؛ الأبعاد تُرسل منفصلة.</small></div>
-                            <div><label for="price-length">الطول (cm)</label><input id="price-length" type="number" min="1" value="40" required></div>
-                            <div><label for="price-width">العرض (cm)</label><input id="price-width" type="number" min="1" value="30" required></div>
-                            <div><label for="price-height">الارتفاع (cm)</label><input id="price-height" type="number" min="1" value="20" required></div>
-                            <div><label for="price-carrier">شركة الشحن</label><select id="price-carrier">
-                                <option value="">كل الشركات</option><option>Aramex</option>
-                                <option>Qatar Post</option><option>SMSA GCC Land Express</option><option>SMSA International Air Express</option>
-                            </select></div>
-                            <div><label for="price-incoterm">Incoterm</label><select id="price-incoterm">
-                                <option value="DDU">DDU — المستلم يدفع الرسوم</option><option value="DDP">DDP — المرسل يدفع الرسوم</option>
-                            </select></div>
-                            <div><label for="price-date">تاريخ الشحن</label><input id="price-date" type="date"></div>
-                            <div><label><input id="price-document" type="checkbox" style="width:auto;min-height:0"> مستندات فقط</label></div>
-                            <div><label><input id="price-dangerous" type="checkbox" style="width:auto;min-height:0"> مواد خطرة</label></div>
-                            <div style="grid-column:1/-1"><label for="price-packages">صناديق متعددة (JSON اختياري، حتى 5)</label>
-                                <input id="price-packages" placeholder='[{"weight":2,"length":30,"width":20,"height":10}]'></div>
-                            <button class="btn" type="submit">حساب السعر</button>
-                        </form>
-                        <pre id="pricing-output" class="output">أدخل بيانات المسار والوزن.</pre>
-                    </div>
-                </section>
-                <section id="view-test-order" class="view">
-                    <div class="panel">
-                        <h2>إرسال أوردر تيست إلى ShipBee</h2>
-                        <div class="warning">سيُنشأ طلب على بيئة ShipBee الحالية، وقد ينتج عنه شحن أو رسوم فعلية. بيانات العميل خيالية، وأرقام الهاتف تجريبية وقد ترفضها ShipBee. أدخل قيمة جمركية مناسبة للمنتج قبل الإرسال.</div>
-                        <form id="test-order-form" class="form-grid">
-                            <div><label for="test-order-product">المنتج من ملف المنتجات</label><select id="test-order-product" required disabled><option value="">تحميل المنتجات...</option></select></div>
-                            <div><label for="test-order-quantity">الكمية</label><input id="test-order-quantity" type="number" min="1" max="10" step="1" value="1" required></div>
-                            <div><label for="test-order-recipient">عميل تجريبي / دولة خليجية</label><select id="test-order-recipient" required disabled><option value="">تحميل بيانات الاختبار...</option></select></div>
-                            <div><label for="test-order-unit-price">قيمة الوحدة الجمركية (USD)</label><input id="test-order-unit-price" type="number" min="0.01" step="0.01" placeholder="أدخل قيمة المنتج" required></div>
-                            <p id="test-order-preview" class="muted" style="grid-column:1/-1">جارٍ تحميل المنتجات والعملاء التجريبيين...</p>
-                            <button id="test-order-submit" class="btn danger" type="submit" disabled>إرسال أوردر تيست</button>
-                        </form>
-                        <pre id="test-order-output" class="output">لم يتم إرسال أوردر تيست.</pre>
-                    </div>
-                </section>
-                <section id="view-account" class="view">
-                    <div class="panel">
-                        <h2>عناوين حساب ShipBee</h2>
-                        <button class="btn" onclick="loadAddresses()">تحديث العناوين</button>
-                        <pre id="addresses-output" class="output">لم يتم تحميل العناوين.</pre>
-                    </div>
-                    <div class="panel">
-                        <h2>Webhooks المسجلة</h2>
-                        <button class="btn" onclick="loadWebhooks()">تحديث Webhooks</button>
-                        <pre id="webhooks-output" class="output">لم يتم تحميل Webhooks.</pre>
-                        <form id="webhook-register-form" class="form-grid">
-                            <div><label for="webhook-url">رابط HTTPS</label><input id="webhook-url" type="url" placeholder="https://example.com/webhook" required></div>
-                            <div><label for="webhook-type">النوع</label><select id="webhook-type"><option value="ORDER_STATUS_UPDATE">ORDER_STATUS_UPDATE</option></select></div>
-                            <button class="btn" type="submit">تسجيل Webhook</button>
-                        </form>
-                        <form id="webhook-delete-form" class="form-grid" style="margin-top:14px">
-                            <div><label for="webhook-delete-type">نوع Webhook للحذف</label><select id="webhook-delete-type"><option value="ORDER_STATUS_UPDATE">ORDER_STATUS_UPDATE</option></select></div>
-                            <div><label for="webhook-delete-url">رابط محدد (اختياري)</label><input id="webhook-delete-url" type="url" placeholder="فارغ = حذف كل Webhooks من النوع"></div>
-                            <button class="btn danger" type="submit">حذف Webhook</button>
-                        </form>
-                    </div>
-                    <div class="panel">
-                        <h2>بيانات مرجعية من ShipBee</h2>
-                        <p class="muted">قائمة الدول وأوصاف الشحن المعتمدة للاستخدام في الطلبات.</p>
-                        <div class="toolbar">
-                            <button class="btn" onclick="loadReferenceData('countries')">تحميل الدول</button>
-                            <button class="btn" onclick="loadReferenceData('shipment-descriptions')">تحميل أوصاف الشحن</button>
-                        </div>
-                        <pre id="reference-output" class="output">اختر بيانات مرجعية لتحميلها.</pre>
-                    </div>
-                </section>
-            </main>
-        </div>
+            <div id="log-details" style="margin-top:16px"></div>
+          </div>
+        </section>
+
+        <section id="view-report" class="view">
+          <div class="panel">
+            <h2>ShipBee Order Report</h2>
+            <form id="report-form" class="form-grid" style="margin-top:14px">
+              <div><label for="report-start">Start date</label><input id="report-start" type="date" required></div>
+              <div><label for="report-end">End date</label><input id="report-end" type="date" required></div>
+              <button class="btn primary" type="submit">Load report</button>
+            </form>
+            <pre id="report-output">Choose a date range.</pre>
+          </div>
+        </section>
+
+        <section id="view-lookup" class="view">
+          <div class="panel">
+            <h2>Shipment Status and Tracking</h2>
+            <form id="lookup-form" class="form-grid" style="margin-top:14px">
+              <div><label for="lookup-kind">Search type</label><select id="lookup-kind">
+                <option value="orderNo">ShipBee order number</option><option value="orderId">ShipBee order ID</option>
+                <option value="trackingNumber">Tracking number</option><option value="awb">AWB</option>
+              </select></div>
+              <div><label for="lookup-value">Value</label><input id="lookup-value" required></div>
+              <div><label><input id="lookup-refresh" type="checkbox" style="width:auto"> Refresh directly from carrier</label></div>
+              <button class="btn primary" type="submit">Lookup</button>
+            </form>
+            <pre id="lookup-output">Enter an order or tracking reference.</pre>
+          </div>
+        </section>
+
+        <section id="view-pricing" class="view">
+          <div class="panel">
+            <h2>Shipping Price Calculator</h2>
+            <form id="pricing-form" class="form-grid" style="margin-top:14px">
+              <div><label>From country</label><input id="price-from-country" value="Qatar" required></div>
+              <div><label>From city</label><input id="price-from-city" value="Lusail" required></div>
+              <div><label>To country</label><input id="price-to-country" required></div>
+              <div><label>To city</label><input id="price-to-city" required></div>
+              <div><label>Weight (kg)</label><input id="price-weight" type="number" min="0.01" step="0.01" required></div>
+              <div><label>Length (cm)</label><input id="price-length" type="number" min="1" value="40" required></div>
+              <div><label>Width (cm)</label><input id="price-width" type="number" min="1" value="30" required></div>
+              <div><label>Height (cm)</label><input id="price-height" type="number" min="1" value="20" required></div>
+              <div><label>Carrier</label><select id="price-carrier"><option value="">Any carrier</option><option>Aramex</option><option>Qatar Post</option><option>SMSA GCC Land Express</option></select></div>
+              <div><label>Incoterm</label><select id="price-incoterm"><option>DDU</option><option>DDP</option></select></div>
+              <div><label>Shipping date</label><input id="price-date" type="date"></div>
+              <button class="btn primary" type="submit">Calculate</button>
+            </form>
+            <pre id="pricing-output">Enter route and package details.</pre>
+          </div>
+        </section>
+
+        <section id="view-test-order" class="view">
+          <div class="panel">
+            <h2>Send Test Order</h2>
+            <p class="warning">A test order can create a real shipment or charges. Use only with an approved test environment.</p>
+            <form id="test-order-form" class="form-grid" style="margin-top:14px">
+              <div><label for="test-product">Product</label><select id="test-product" disabled><option>Loading...</option></select></div>
+              <div><label for="test-quantity">Quantity</label><input id="test-quantity" type="number" min="1" max="10" value="1"></div>
+              <div><label for="test-recipient">Test recipient</label><select id="test-recipient" disabled><option>Loading...</option></select></div>
+              <div><label for="test-unit-price">Customs value (USD)</label><input id="test-unit-price" type="number" min="0.01" step="0.01" required></div>
+              <button id="test-submit" class="btn primary" type="submit" disabled>Send test order</button>
+            </form>
+            <pre id="test-output">No test order has been sent.</pre>
+          </div>
+        </section>
+
+        <section id="view-account" class="view">
+          <div class="panel">
+            <div class="panel-head"><h2>ShipBee Addresses</h2><button class="btn" onclick="loadAddresses()">Refresh addresses</button></div>
+            <pre id="addresses-output">Not loaded.</pre>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Reference Data</h2><div class="toolbar"><button class="btn" onclick="loadReference('countries')">Countries</button><button class="btn" onclick="loadReference('shipment-descriptions')">Shipment descriptions</button></div></div>
+            <pre id="reference-output">Choose a reference data set.</pre>
+          </div>
+        </section>
+      </main>
     </div>
-    <script>
-        let currentLogs = [];
-        let selectedOrderId = null;
-        const hydratedOrders = new Map();
-        let testOrderProducts = [];
-        let testOrderRecipients = [];
-        let shipbeeEnvironment = null;
-        let testOrderSubmitting = false;
+  </div>
 
-        function escapeHtml(value) {
-            return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            })[character]);
-        }
+  <script>
+    let logs = [];
+    let selectedOrderId = null;
+    const hydrated = new Map();
+    let testProducts = [];
+    let testRecipients = [];
 
-        function showJson(elementId, value) {
-            document.getElementById(elementId).textContent =
-                typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-        }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+    function showJson(id, value) {
+      document.getElementById(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+    function amount(value, currency) {
+      if (value == null || value === '') return 'N/A';
+      const number = Number(value);
+      if (!Number.isFinite(number)) return 'N/A';
+      try { return new Intl.NumberFormat('en', { style: 'currency', currency: String(currency || 'USD').toUpperCase() }).format(number); }
+      catch { return `${number.toFixed(2)} ${currency || ''}`.trim(); }
+    }
+    async function apiRequest(url, options) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { message: text }; }
+      if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+      return data;
+    }
+    function relatedLogs(orderId) { return logs.filter(log => String(log.orderId) === String(orderId)); }
+    function statusFor(group) {
+      const success = group.find(log => log.status === 'success' && log.tracking);
+      if (success) return { label: 'Completed', style: 'b-success', tracking: success.tracking };
+      if (group.some(log => log.status === 'shopify_update_failed')) {
+        const item = group.find(log => log.status === 'shopify_update_failed');
+        return { label: 'Shipment created; Shopify update failed', style: 'b-failed', tracking: item.tracking };
+      }
+      const shipbeeFailed = group.find(log => log.type === 'shipbee_response' && log.shipbeeResponse && !log.shipbeeResponse.success);
+      if (shipbeeFailed) return { label: 'ShipBee rejected the order', style: 'b-failed', tracking: null };
+      if (group.some(log => ['error', 'shipbee_failed', 'webhook_rejected'].includes(log.status))) {
+        return { label: 'Failed', style: 'b-failed', tracking: null };
+      }
+      if (group.some(log => ['processing', 'webhook_received', 'shipbee_submission_started'].includes(log.status))) {
+        return { label: 'Processing', style: 'b-pending', tracking: null };
+      }
+      return { label: 'Pending', style: 'b-pending', tracking: null };
+    }
+    function quoteFor(group) {
+      const log = group.find(item => item.shippingQuote);
+      return log ? log.shippingQuote : null;
+    }
+    function quoteAmount(quote) {
+      if (!quote || quote.totalCost == null) return 'No quote';
+      const value = Number(quote.totalCost);
+      return Number.isFinite(value) ? amount(value, quote.currency || quote.currencyCode) : 'Invalid quote';
+    }
 
-        function formatAmount(amount, currency) {
-            if (amount == null || amount === '') return 'غير متاح';
-            const value = Number(amount);
-            if (!Number.isFinite(value)) return 'غير متاح';
-            const normalizedCurrency = String(currency || '').toUpperCase();
-            if (/^[A-Z]{3}$/.test(normalizedCurrency)) {
-                try {
-                    return new Intl.NumberFormat('en', {
-                        style: 'currency',
-                        currency: normalizedCurrency
-                    }).format(value);
-                } catch {
-                    return `${value.toFixed(2)} ${normalizedCurrency}`;
-                }
-            }
-            return `${value.toFixed(2)} ${/^[A-Z]{3}$/.test(normalizedCurrency) ?
-                normalizedCurrency : '(العملة غير محددة)'}`;
-        }
+    async function loadEnvironment() {
+      try {
+        const config = await apiRequest('/api/shipbee/config');
+        document.getElementById('environment').textContent = `ShipBee: ${config.environment || 'custom'}`;
+        document.getElementById('environment').className = `badge ${config.apiKeyConfigured ? 'b-success' : 'b-failed'}`;
+        document.getElementById('api-status').textContent = config.apiKeyConfigured ? 'API key configured' : 'API key missing';
+      } catch (error) {
+        document.getElementById('environment').textContent = 'Environment unavailable';
+        document.getElementById('environment').className = 'badge b-failed';
+        document.getElementById('api-status').textContent = error.message;
+      }
+    }
 
-        function getOrderLogs(orderId) {
-            return currentLogs.filter(log => String(log.orderId) === String(orderId));
-        }
-
-        function getOrderSummary(logs) {
-            const log = logs.find(item => item.orderSummary);
-            return log ? log.orderSummary : {};
-        }
-
-        function getShipBeeRecipientName(logs) {
-            const log = logs.find(item => item.type === 'shipbee_response');
-            const requestName = log && log.shipbeePayload && log.shipbeePayload.stops &&
-                log.shipbeePayload.stops[0] && log.shipbeePayload.stops[0].receiverName;
-            const responseName = log && log.shipbeeResponse && log.shipbeeResponse.data &&
-                log.shipbeeResponse.data.stops && log.shipbeeResponse.data.stops[0] &&
-                log.shipbeeResponse.data.stops[0].receiver &&
-                log.shipbeeResponse.data.stops[0].receiver.name;
-            return requestName || responseName || null;
-        }
-
-        function getShippingQuote(logs) {
-            const log = logs.find(item => item.shippingQuote);
-            return log ? log.shippingQuote : null;
-        }
-
-        function formatShippingQuote(quote) {
-            if (!quote || quote.totalCost == null) return 'لم يصل عرض سعر';
-            const amount = Number(quote.totalCost);
-            if (!Number.isFinite(amount) || amount <= 0) {
-                return `عرض سعر غير صالح (${formatAmount(quote.totalCost, quote.currency || quote.currencyCode)})`;
-            }
-            return formatAmount(amount, quote.currency || quote.currencyCode);
-        }
-
-        function getOrderStatus(logs) {
-            const latestOutcome = logs.find(log =>
-                ['success', 'shopify_update_failed'].includes(log.status) && log.tracking
-            );
-            const duplicate = logs.find(log =>
-                log.status === 'duplicate_skipped' &&
-                log.reason === 'A webhook for this Shopify order is already being processed'
-            );
-            if (latestOutcome && latestOutcome.status === 'success') return {
-                label: 'تم إنشاء الشحنة وتحديث Shopify',
-                style: 'b-success',
-                log: latestOutcome
-            };
-            if (latestOutcome && latestOutcome.status === 'shopify_update_failed') return {
-                label: `الشحنة ${latestOutcome.tracking} أُنشئت، لكن تعذر ربطها في Shopify`,
-                style: 'b-failed',
-                log: latestOutcome
-            };
-            const rejected = logs.find(log =>
-                log.type === 'shipbee_response' && log.shipbeeResponse && !log.shipbeeResponse.success);
-            if (rejected) return {
-                label: 'ShipBee لم يقبل الطلب',
-                style: 'b-failed',
-                log: rejected
-            };
-            const monthlyBillWithoutTracking = logs.find(log =>
-                log.type === 'shipbee_response' &&
-                log.shipbeeResponse &&
-                log.shipbeeResponse.success &&
-                log.shipbeePayload &&
-                log.shipbeePayload.paymentMethod === 'MONTHLY_BILL' &&
-                !(log.shipbeeResponse.data &&
-                    log.shipbeeResponse.data.shipment &&
-                    log.shipbeeResponse.data.shipment.trackingNumber));
-            if (monthlyBillWithoutTracking) {
-                return {
-                    label: 'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)',
-                    style: 'b-failed',
-                    log: logs.find(log => log.integrationErrorCode) || monthlyBillWithoutTracking,
-                    missingMonthlyBillTracking: true
-                };
-            }
-            const error = logs.find(log => log.status === 'error');
-            if (error) {
-                return {
-                    label: error.integrationErrorCode === 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' ?
-                        'ShipBee لم يُرجع رقم تتبع (MONTHLY_BILL)' : error.integrationDiagnostic &&
-                        error.integrationDiagnostic.serviceName === 'ShipBee Qatar Post pricing' ?
-                        'فشل الحصول على سعر Qatar Post من ShipBee' : error.integrationDiagnostic &&
-                        error.integrationDiagnostic.serviceName === 'ShipBee order creation' ?
-                        'فشل إنشاء الطلب لدى ShipBee' : 'تعذر تجهيز الشحنة',
-                    style: 'b-failed',
-                    log: error
-                };
-            }
-            const webhookRejection = logs.find(log => log.type === 'webhook_rejected');
-            if (webhookRejection) {
-                return {
-                    label: 'Shopify أرسل Webhook بتوقيع غير مقبول — الطلب لم يُرسل إلى ShipBee',
-                    style: 'b-failed',
-                    log: webhookRejection
-                };
-            }
-            if (duplicate && (!latestOutcome ||
-                Date.parse(duplicate.at) > Date.parse(latestOutcome.at))) {
-                return {
-                    label: 'Webhook مكرر — الطلب قيد المعالجة أو تم تجاهله',
-                    style: 'b-info',
-                    log: duplicate
-                };
-            }
-            if (logs.some(log => log.status === 'duplicate_skipped')) {
-                return {
-                    label: 'طلب مكرر — تم تجاهله',
-                    style: 'b-info',
-                    log: null
-                };
-            }
-            const processingLog = logs.find(log => ['processing', 'webhook_received', 'shipbee_submission_started'].includes(log.status));
-            const processingAge = processingLog ? Date.now() - Date.parse(processingLog.at) : 0;
-            if (processingLog && (!Number.isFinite(processingAge) || processingAge > 120000)) {
-                return {
-                    label: 'لا توجد نتيجة مسجلة من ShipBee',
-                    style: 'b-failed',
-                    log: processingLog,
-                    stale: true
-                };
-            }
-            return {
-                label: 'قيد المعالجة',
-                style: 'b-pending',
-                log: null
-            };
-        }
-
-        function redactSupportData(value, key) {
-            if (key && /address|phone|email|customer|recipient|sender|token|secret|authorization/i.test(key)) {
-                return '[محذوف للخصوصية]';
-            }
-            if (Array.isArray(value)) {
-                return value.map(item => redactSupportData(item, ''));
-            }
-            if (!value || typeof value !== 'object') return value;
-            return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
-                childKey,
-                redactSupportData(childValue, childKey)
-            ]));
-        }
-
-        function redactShipBeeRequest(value, key) {
-            if (key && /phone|email|name|token|secret|authorization|street|building|landmark|apartment|floor|coordinate|address1|address2/i.test(key)) {
-                return '[محذوف للخصوصية]';
-            }
-            if (Array.isArray(value)) {
-                return value.map(item => redactShipBeeRequest(item, ''));
-            }
-            if (!value || typeof value !== 'object') return value;
-            return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
-                childKey,
-                redactShipBeeRequest(childValue, childKey)
-            ]));
-        }
-
-        function getShipBeeSupportReport(logs, responseLog, errorLog) {
-            const response = responseLog && responseLog.shipbeeResponse ||
-                errorLog && errorLog.shipbeeResponse || null;
-            const request = responseLog && responseLog.shipbeePayload ||
-                errorLog && errorLog.integrationDiagnostic &&
-                errorLog.integrationDiagnostic.request || null;
-            const responseShipment = response && response.data && response.data.shipment;
-            const paymentMethod = errorLog && errorLog.paymentMethod ||
-                responseLog && responseLog.paymentMethod ||
-                responseLog && responseLog.shipbeePayload &&
-                responseLog.shipbeePayload.paymentMethod || null;
-            const integrationErrorCode = errorLog && errorLog.integrationErrorCode ||
-                (paymentMethod === 'MONTHLY_BILL' && !(
-                    responseShipment && responseShipment.trackingNumber
-                ) ? 'MONTHLY_BILL_TRACKING_NUMBER_MISSING' : null);
-            return {
-                integrationErrorCode,
-                shipbeeErrorCode: errorLog && errorLog.shipbeeErrorCode ||
-                    responseLog && responseLog.shipbeeErrorCode || null,
-                message: errorLog && errorLog.error ||
-                    (integrationErrorCode ?
-                        'ShipBee accepted the MONTHLY_BILL order but returned no tracking number.' :
-                        response && (response.message || response.error && response.error.message)) || null,
-                paymentMethod,
-                carrier: errorLog && errorLog.carrier ||
-                    responseLog && responseLog.shipbeePayload &&
-                    responseLog.shipbeePayload.shipment &&
-                    responseLog.shipbeePayload.shipment.shippingCompany || null,
-                httpStatus: errorLog && errorLog.shipbeeHttpStatus ||
-                    responseLog && responseLog.shipbeeHttpStatus || null,
-                requestId: errorLog && errorLog.shipbeeRequestId ||
-                    responseLog && responseLog.shipbeeRequestId || null,
-                integrationDiagnostic: redactSupportData(
-                    errorLog && errorLog.integrationDiagnostic || null
-                ),
-                shippingQuoteError: errorLog && errorLog.shippingQuoteError ||
-                    responseLog && responseLog.shippingQuoteError || null,
-                shippingQuoteDiagnostic: redactSupportData(
-                    errorLog && errorLog.shippingQuoteDiagnostic ||
-                    responseLog && responseLog.shippingQuoteDiagnostic || null
-                ),
-                shopifyOrderNumber: (logs.find(log => log.orderNumber) || {}).orderNumber || null,
-                shipbeeOrderId: errorLog && errorLog.shipbeeOrderId ||
-                    response && response.data && response.data.id || null,
-                shipbeeOrderNo: errorLog && errorLog.shipbeeOrderNo ||
-                    response && response.data && response.data.orderNo || null,
-                shipbeeRequest: redactShipBeeRequest(request),
-                shipbeeResponse: redactSupportData(response)
-            };
-        }
-
-        function renderOrderDetails(orderId) {
-            const logs = getOrderLogs(orderId);
-            const savedSummary = getOrderSummary(logs);
-            const hydrated = hydratedOrders.get(String(orderId));
-            const responseLog = logs.find(log => log.type === 'shipbee_response');
-            const shipbeeRecipientName = getShipBeeRecipientName(logs);
-            const summary = hydrated ? {
-                customerName: shipbeeRecipientName || hydrated.customerName,
-                items: hydrated.items,
-                shippingLines: hydrated.shippingLines
-            } : {
-                ...savedSummary,
-                customerName: shipbeeRecipientName || savedSummary.customerName
-            };
-            const errorLog = logs.find(log => log.status === 'error');
-            const quote = getShippingQuote(logs) || (hydrated && hydrated.shippingQuote);
-            const shippingQuoteError = responseLog && responseLog.shippingQuoteError ||
-                errorLog && errorLog.shippingQuoteError ||
-                hydrated && hydrated.quoteError || null;
-            const shippingQuoteDiagnostic = responseLog && responseLog.shippingQuoteDiagnostic ||
-                errorLog && errorLog.shippingQuoteDiagnostic ||
-                hydrated && hydrated.quoteDiagnostic || null;
-            const packageDetails = (responseLog && responseLog.packageDetails) ||
-                (hydrated && hydrated.packageDetails);
-            const shopifyOrder = logs.find(log => log.orderSummary) ||
-                logs.find(log => log.orderNumber) || {};
-            const status = getOrderStatus(logs);
-            const shipmentTrackings = [];
-            const seenTrackings = new Set();
-            logs.forEach(log => {
-                const shipment = log.shipbeeResponse && log.shipbeeResponse.data &&
-                    log.shipbeeResponse.data.shipment;
-                const trackingNumber = log.tracking || shipment && shipment.trackingNumber;
-                if (!trackingNumber || seenTrackings.has(String(trackingNumber))) return;
-                seenTrackings.add(String(trackingNumber));
-                shipmentTrackings.push({
-                    number: trackingNumber,
-                    status: log.status === 'success' ? 'تم تسجيله في Shopify' :
-                        log.status === 'shopify_update_failed' ? 'لم يُربط في Shopify' :
-                            'صادر من ShipBee'
-                });
-            });
-            const webhookRejection = logs.find(log => log.type === 'webhook_rejected');
-            const displayOrder = hydrated || shopifyOrder;
-            const shipbeeDetails = {
-                request: responseLog && responseLog.shipbeePayload ||
-                    errorLog && errorLog.integrationDiagnostic &&
-                    errorLog.integrationDiagnostic.request || null,
-                response: responseLog && responseLog.shipbeeResponse ||
-                    errorLog && errorLog.shipbeeResponse || null,
-                error: errorLog && errorLog.error ||
-                    responseLog && responseLog.shippingQuoteError ||
-                    webhookRejection && webhookRejection.reason || null,
-                errorDetails: errorLog && errorLog.integrationDiagnostic ||
-                    shippingQuoteDiagnostic ||
-                    (webhookRejection ? {
-                        code: 'SHOPIFY_WEBHOOK_HMAC_INVALID',
-                        webhookId: webhookRejection.shopifyWebhookId || null,
-                        topic: webhookRejection.shopifyTopic || null
-                    } : null),
-                shippingQuote: quote,
-                events: logs.map(log => ({
-                    at: log.at,
-                    type: log.type,
-                    status: log.status,
-                    error: log.error || null,
-                    reason: log.reason || null,
-                    shippingQuoteError: log.shippingQuoteError || null,
-                    httpStatus: log.shipbeeHttpStatus || null,
-                    requestId: log.shipbeeRequestId || null,
-                    shipbeeOrderNo: log.shipbeeOrderNo || null,
-                    tracking: log.tracking || null,
-                    request: log.shipbeePayload ||
-                        log.integrationDiagnostic && log.integrationDiagnostic.request || null,
-                    response: log.shipbeeResponse || null,
-                    diagnostic: log.integrationDiagnostic || null,
-                    shippingQuoteDiagnostic: log.shippingQuoteDiagnostic || null
-                }))
-            };
-            const shippingLines = Array.isArray(summary.shippingLines) ? summary.shippingLines : [];
-            const customerShipping = shippingLines.length ?
-                shippingLines.map(line => `${escapeHtml(line.title || 'شحن Shopify')}: ${formatAmount(line.price, line.currency)}`).join('، ') :
-                'غير متوفر في بيانات Shopify';
-            const items = Array.isArray(summary.items) ? summary.items : [];
-            const itemRows = items.length ? items.map(item => {
-                    const calculatedLineTotal = Number(item.unitPrice) * Number(item.quantity);
-                    const lineTotal = item.lineTotal != null ? item.lineTotal :
-                        (Number.isFinite(calculatedLineTotal) ? calculatedLineTotal : null);
-                    return `
-                    <tr>
-                        <td>${escapeHtml(item.title || 'منتج بدون اسم')}</td>
-                        <td>${escapeHtml(item.sku || 'بدون SKU')}</td>
-                        <td>${escapeHtml(item.quantity == null ? '—' : item.quantity)}</td>
-                        <td>${formatAmount(item.unitPrice, displayOrder.currency || shopifyOrder.currency)}</td>
-                        <td>${formatAmount(lineTotal, displayOrder.currency || shopifyOrder.currency)}</td>
-                    </tr>`;
-                }).join('') :
-                '<tr><td colspan="5" class="empty">تفاصيل المنتجات غير متوفرة لهذا السجل.</td></tr>';
-            const quoteAmount = formatShippingQuote(quote);
-            const packageDimensions = packageDetails ?
-                `${escapeHtml(packageDetails.length)} × ${escapeHtml(packageDetails.width)} × ${escapeHtml(packageDetails.height)} سم` :
-                'غير متوفر';
-            const weights = packageDetails ?
-                `${escapeHtml(packageDetails.actualWeightKg)} كجم — الوزن الفعلي المرسل` :
-                'غير متوفر';
-            const quoteLabel = quote && quote.source === 'shipbee-order-response' ?
-                'سعر Qatar Post من رد ShipBee' : 'سعر Qatar Post';
-            const quoteNote = quote && quote.source === 'shipbee-order-response' ?
-                'السعر مأخوذ من totalCost في رد إنشاء الطلب من ShipBee، وليس من واجهة التسعير.' :
-                'السعر من عرض Qatar Post وليس فاتورة الشحن النهائية.';
-            let note = '';
-            if (status.log && status.log.error) note = status.log.error;
-            else if (status.log && status.log.reason) note = status.log.reason;
-            else if (status.log && status.log.shipbeeResponse && status.log.shipbeeResponse.message) {
-                note = status.log.shipbeeResponse.message;
-            } else if (status.stale) {
-                note = 'مرّ أكثر من دقيقتين دون تسجيل نتيجة التكامل. حدّث التفاصيل، وراجع سجلات الخادم إذا استمرت الحالة.';
-            }
-            if (status.missingMonthlyBillTracking) {
-                note = 'ShipBee قبل الطلب، لكنه لم يُرجع رقم تتبع مع MONTHLY_BILL. اعرض التشخيص وانسخه لإرساله لدعم ShipBee.';
-            }
-            if (hydrated && hydrated.packageError) note = hydrated.packageError;
-            if (shippingQuoteError) {
-                const orderWasSubmitted = Boolean(responseLog ||
-                    (errorLog && errorLog.integrationDiagnostic &&
-                        errorLog.integrationDiagnostic.serviceName === 'ShipBee order creation'));
-                const quoteNote = webhookRejection ?
-                    `معلومة تسعير منفصلة؛ الطلب لم يصل إلى ShipBee: ${shippingQuoteError}` :
-                    orderWasSubmitted ?
-                        `تم إرسال الطلب على MONTHLY_BILL دون عرض Qatar Post صالح: ${shippingQuoteError}` :
-                        `تعذر الحصول على عرض Qatar Post: ${shippingQuoteError}`;
-                note = [note, quoteNote].filter(Boolean).join(' — ');
-            }
-            const supportReport = getShipBeeSupportReport(logs, responseLog, errorLog);
-
-            document.getElementById('log-details').innerHTML = `
-                <div class="toolbar" style="justify-content:space-between;align-items:center">
-                    <h3 class="order-details-title">ملخص الطلب #${escapeHtml(displayOrder.orderNumber || orderId)}</h3>
-                    <button class="btn" type="button" id="refresh-order-details">تحديث تفاصيل Shopify وسعر Qatar Post</button>
-                </div>
-                <div class="order-summary">
-                    <div class="order-card"><strong>حالة الطلب</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
-                    <div class="order-card"><strong>مستلم الشحنة</strong><span>${escapeHtml(summary.customerName || shopifyOrder.customer || 'غير متاح')}</span></div>
-                    <div class="order-card"><strong>إجمالي ما دفعه العميل</strong><span>${formatAmount(displayOrder.total, displayOrder.currency)}</span></div>
-                    <div class="order-card"><strong>شركة الشحن</strong><span>${escapeHtml(quote && quote.carrier || 'Qatar Post')}</span></div>
-                    <div class="order-card"><strong>${escapeHtml(quoteLabel)}</strong><span>${escapeHtml(quoteAmount)}</span></div>
-                    <div class="order-card"><strong>الشحن الذي دفعه العميل في Shopify</strong><span>${customerShipping}</span></div>
-                    <div class="order-card"><strong>الوجهة</strong><span>${escapeHtml([displayOrder.city || shopifyOrder.city, displayOrder.country || shopifyOrder.country].filter(Boolean).join('، ') || 'غير متاحة')}</span></div>
-                    <div class="order-card"><strong>أبعاد الشحنة</strong><span>${packageDimensions}</span></div>
-                    <div class="order-card"><strong>الوزن</strong><span>${weights}</span></div>
-                    <div class="order-card"><strong>أرقام التتبع</strong><span>${shipmentTrackings.length ?
-                        shipmentTrackings.map(item => `${escapeHtml(item.number)} — ${escapeHtml(item.status)}`).join('<br>') :
-                        'لم يصدر بعد'}</span></div>
-                </div>
-                <p class="order-note">${escapeHtml(quoteNote)} الشحن الذي دفعه العميل رقم منفصل من Shopify.</p>
-                ${note ? `<p class="warning" style="margin-top:12px">${escapeHtml(note)}</p>` : ''}
-                ${responseLog || errorLog ? `
-                    <div class="order-card" style="margin-top:14px">
-                        <div class="toolbar" style="justify-content:space-between;align-items:center">
-                            <strong>تشخيص ShipBee — جاهز لإرساله للدعم</strong>
-                            <button class="btn" type="button" id="copy-shipbee-report">نسخ تقرير المشكلة</button>
-                        </div>
-                        <p class="muted">طريقة الدفع: ${escapeHtml(supportReport.paymentMethod || 'غير متاحة')} |
-                            HTTP: ${escapeHtml(supportReport.httpStatus || 'غير متاح')} |
-                            رمز ShipBee: ${escapeHtml(supportReport.shipbeeErrorCode || 'غير موجود في الرد')} |
-                            رقم الطلب لدى ShipBee: ${escapeHtml(supportReport.shipbeeOrderNo || supportReport.shipbeeOrderId || 'غير متاح')}</p>
-                        <details style="margin-top:10px">
-                            <summary style="cursor:pointer">عرض رد ShipBee ورمز المشكلة</summary>
-                            <pre style="margin-top:10px">${escapeHtml(JSON.stringify(supportReport, null, 2))}</pre>
-                        </details>
-                        <p id="copy-shipbee-report-status" class="muted" style="margin-top:8px"></p>
-                    </div>` : ''}
-                ${logs.length ? `
-                    <details class="order-card" style="margin-top:14px">
-                        <summary style="cursor:pointer"><strong>تفاصيل الطلب المرسل ورد شركة الشحن وكل الأحداث</strong></summary>
-                        <p class="muted" style="margin-top:8px">يشمل الطلب المرسل، رد ShipBee الكامل، الأخطاء، وتسلسل أحداث هذا الطلب. إذا لم يظهر طلب أو رد، فستجد حالة آخر حدث مسجل.</p>
-                        <pre style="margin-top:10px">${escapeHtml(JSON.stringify(shipbeeDetails, null, 2))}</pre>
-                    </details>` : ''}
-                <h3 class="order-details-title" style="margin-top:18px">المنتجات</h3>
-                <div class="table-wrap">
-                    <table class="order-items">
-                        <thead><tr><th>المنتج</th><th>SKU</th><th>الكمية</th><th>سعر الوحدة</th><th>إجمالي المنتج</th></tr></thead>
-                        <tbody>${itemRows}</tbody>
-                    </table>
-                </div>
-                <p id="order-refresh-message" class="muted" style="margin-top:10px"></p>`;
-            document.getElementById('refresh-order-details').addEventListener('click', () =>
-                refreshOrderDetails(orderId));
-            const copyReportButton = document.getElementById('copy-shipbee-report');
-            if (copyReportButton) {
-                copyReportButton.addEventListener('click', () =>
-                    copyShipBeeSupportReport(supportReport));
-            }
-        }
-
-        async function copyShipBeeSupportReport(report) {
-            const status = document.getElementById('copy-shipbee-report-status');
-            const text = JSON.stringify(report, null, 2);
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(text);
-                } else {
-                    const input = document.createElement('textarea');
-                    input.value = text;
-                    input.style.position = 'fixed';
-                    input.style.opacity = '0';
-                    document.body.appendChild(input);
-                    input.select();
-                    const copied = document.execCommand('copy');
-                    input.remove();
-                    if (!copied) throw new Error('المتصفح لم يسمح بالنسخ');
-                }
-                if (status) status.textContent = 'تم نسخ التقرير. راجعه قبل إرساله إلى دعم ShipBee.';
-            } catch (error) {
-                if (status) status.textContent = `تعذر النسخ: ${error.message}`;
-            }
-        }
-
-        async function refreshOrderDetails(orderId) {
-            const message = document.getElementById('order-refresh-message');
-            if (message) message.textContent = 'جارٍ جلب الطلب من Shopify وحساب عرض Qatar Post...';
-            try {
-                const details = await apiRequest(
-                    `/api/shopify/orders/${encodeURIComponent(orderId)}/details`
-                );
-                hydratedOrders.set(String(orderId), details);
-                renderOrderDetails(orderId);
-            } catch (error) {
-                if (message) {
-                    message.textContent = `تعذر تحديث التفاصيل: ${error.message}`;
-                    message.className = 'order-note';
-                }
-            }
-        }
-
-        async function apiRequest(url, options) {
-            const response = await fetch(url, options);
-            const text = await response.text();
-            let data;
-            try {
-                data = text ? JSON.parse(text) : {};
-            } catch {
-                data = { message: text };
-            }
-            if (!response.ok) {
-                const error = new Error(data.message || `HTTP ${response.status}`);
-                error.statusCode = response.status;
-                error.responseData = data;
-                throw error;
-            }
-            return data;
-        }
-
-        async function runForm(form, outputId, action) {
-            const output = document.getElementById(outputId);
-            output.textContent = 'جارٍ التنفيذ...';
-            try {
-                showJson(outputId, await action(new FormData(form)));
-            } catch (error) {
-                output.textContent = error.responseData ?
-                    `خطأ: HTTP ${error.statusCode}\n${JSON.stringify(error.responseData, null, 2)}` :
-                    `خطأ: ${error.message}`;
-            }
-        }
-
-        async function loadEnvironment() {
-            try {
-                const config = await apiRequest('/api/shipbee/config');
-                shipbeeEnvironment = String(config.environment || 'custom');
-                const badge = document.getElementById('environment');
-                badge.textContent = `ShipBee: ${shipbeeEnvironment}`;
-                const integrationReady = config.apiKeyConfigured && config.webhookSecretConfigured;
-                badge.className = `badge ${integrationReady ? 'b-success' : 'b-failed'}`;
-                document.getElementById('api-status').textContent = [
-                    config.apiKeyConfigured ? 'مفتاح ShipBee مضبوط' : 'مفتاح ShipBee غير مضبوط',
-                    config.webhookSecretConfigured ? 'سر Shopify Webhook مضبوط' :
-                        'SHOPIFY_WEBHOOK_SECRET غير مضبوط في Vercel'
-                ].join(' • ');
-                updateTestOrderSubmitState();
-            } catch (error) {
-                shipbeeEnvironment = null;
-                document.getElementById('environment').textContent = 'تعذر معرفة البيئة';
-                document.getElementById('api-status').textContent = error.message;
-                updateTestOrderSubmitState();
-            }
-        }
-
-        function updateTestOrderSubmitState() {
-            const submitButton = document.getElementById('test-order-submit');
-            if (submitButton) {
-                submitButton.disabled = testOrderSubmitting ||
-                    !testOrderProducts.length || !testOrderRecipients.length ||
-                    !shipbeeEnvironment;
-            }
-        }
-
-        function updateTestOrderPreview() {
-            const product = testOrderProducts.find(item =>
-                String(item.id) === document.getElementById('test-order-product').value);
-            const recipient = testOrderRecipients.find(item =>
-                item.id === document.getElementById('test-order-recipient').value);
-            const preview = document.getElementById('test-order-preview');
-            if (!product || !recipient) {
-                preview.textContent = 'اختر منتجًا وعميلًا تجريبيًا لعرض ملخص الشحنة.';
-                return;
-            }
-
-            const quantity = Number(document.getElementById('test-order-quantity').value || 1);
-            const totalWeightKg = Number((product.weightKg * quantity).toFixed(3));
-            const unitPrice = Number(document.getElementById('test-order-unit-price').value);
-            const totalValue = Number.isFinite(unitPrice) && unitPrice > 0 ?
-                ` — القيمة الجمركية: ${(unitPrice * quantity).toFixed(2)} USD` : '';
-            preview.textContent =
-                `${product.name} — الوزن الفعلي الإجمالي: ${totalWeightKg} kg — ` +
-                `الأبعاد: ${product.length} × ${product.width} × ${product.height} cm — ` +
-                `الوجهة: ${recipient.label}${totalValue}. لن يُستخدم الوزن الحجمي.`;
-        }
-
-        async function loadTestOrderOptions() {
-            const productSelect = document.getElementById('test-order-product');
-            const recipientSelect = document.getElementById('test-order-recipient');
-            try {
-                const options = await apiRequest('/api/shipbee/test-order/options');
-                if (!Array.isArray(options.products) || !Array.isArray(options.recipients)) {
-                    throw new Error('استجابة خيارات أوردر التيست غير صالحة');
-                }
-
-                testOrderProducts = options.products;
-                testOrderRecipients = options.recipients;
-                productSelect.innerHTML = '<option value="">اختر المنتج</option>' +
-                    testOrderProducts.map(product =>
-                        `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)} ` +
-                        `(${escapeHtml(product.sku || 'بدون SKU')} — ${escapeHtml(product.weightKg)} kg)</option>`
-                    ).join('');
-                recipientSelect.innerHTML = '<option value="">اختر العميل والوجهة</option>' +
-                    testOrderRecipients.map(recipient =>
-                        `<option value="${escapeHtml(recipient.id)}">${escapeHtml(recipient.label)}</option>`
-                    ).join('');
-                productSelect.disabled = !testOrderProducts.length;
-                recipientSelect.disabled = !testOrderRecipients.length;
-                if (!testOrderProducts.length || !testOrderRecipients.length) {
-                    throw new Error('لا توجد منتجات أو وجهات تجريبية صالحة');
-                }
-                updateTestOrderPreview();
-            } catch (error) {
-                document.getElementById('test-order-output').textContent =
-                    `تعذر تحميل خيارات أوردر التيست: ${error.message}`;
-            }
-            updateTestOrderSubmitState();
-        }
-
-        async function loadLogs() {
-            try {
-                const logs = await apiRequest('/api/logs');
-                if (!Array.isArray(logs)) throw new Error('استجابة السجلات غير صالحة');
-                currentLogs = logs;
-                document.getElementById('s-total').textContent = logs.length;
-                document.getElementById('s-success').textContent = logs.filter(log => log.status === 'success').length;
-                document.getElementById('s-failed').textContent = logs.filter(log =>
-                    ['error', 'shipbee_failed', 'webhook_rejected'].includes(log.status)).length;
-                document.getElementById('s-pending').textContent = logs.filter(log =>
-                    ['processing', 'webhook_received', 'awaiting_payment', 'shopify_update_failed'].includes(log.status)).length;
-
-                const tbody = document.getElementById('tbody');
-                if (!logs.length) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="empty">لا توجد سجلات.</td></tr>';
-                    document.getElementById('log-details').textContent = 'لا توجد طلبات حتى الآن.';
-                    return;
-                }
-                const orderGroups = new Map();
-                logs.forEach(log => {
-                    const key = String(log.orderId || log.id);
-                    if (!orderGroups.has(key)) orderGroups.set(key, []);
-                    orderGroups.get(key).push(log);
-                });
-                tbody.innerHTML = [...orderGroups.entries()].map(([orderId, relatedLogs], index) => {
-                    const log = relatedLogs[0];
-                    const orderLog = relatedLogs.find(item => item.orderSummary) ||
-                        relatedLogs.find(item => item.orderNumber) || log;
-                    const quote = getShippingQuote(relatedLogs);
-                    const hydrated = hydratedOrders.get(String(orderId));
-                    const recipientName = getShipBeeRecipientName(relatedLogs);
-                    return `
-                        <tr class="main-row" data-order-id="${escapeHtml(log.orderId || '')}">
-                            <td>${escapeHtml(new Date(log.at).toLocaleString('ar-EG'))}</td>
-                            <td>#${escapeHtml(log.orderNumber || log.orderId || '—')}</td>
-                            <td>${escapeHtml(recipientName || (hydrated && hydrated.customerName) ||
-                                (orderLog.orderSummary && orderLog.orderSummary.customerName) ||
-                                log.customer || orderLog.customer || '—')}</td>
-                            <td>${escapeHtml(log.country || orderLog.country || (hydrated && hydrated.country) || '—')}</td>
-                            <td>${formatAmount(orderLog.total || (hydrated && hydrated.total), orderLog.currency || (hydrated && hydrated.currency))}</td>
-                            <td>${escapeHtml(quote && quote.totalCost != null ?
-                                formatShippingQuote(quote) :
-                                (hydrated && hydrated.shippingQuote ?
-                                    formatShippingQuote(hydrated.shippingQuote) :
-                                    '—'))}</td>
-                            <td>${escapeHtml(getOrderStatus(relatedLogs).label)}</td>
-                            <td>${escapeHtml((relatedLogs.find(item => item.tracking) || {}).tracking || '—')}</td>
-                        </tr>`;
-                }).join('');
-                if (selectedOrderId && getOrderLogs(selectedOrderId).length) {
-                    renderOrderDetails(selectedOrderId);
-                }
-            } catch (error) {
-                document.getElementById('tbody').innerHTML =
-                    `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
-            }
-        }
-
-        async function clearLogs() {
-            if (!confirm('تأكيد مسح سجلات التكامل المحلية؟')) return;
-            try {
-                await apiRequest('/api/logs', { method: 'DELETE' });
-                selectedOrderId = null;
-                document.getElementById('log-details').textContent = 'تم مسح السجلات.';
-                await loadLogs();
-            } catch (error) {
-                alert(error.message);
-            }
-        }
-
-        async function loadReport(startDate, endDate, outputId) {
-            const params = new URLSearchParams({ startDate, endDate });
-            return apiRequest(`/api/shipbee/report?${params}`);
-        }
-
-        async function loadAddresses() {
-            try {
-                showJson('addresses-output', await apiRequest('/api/shipbee/addresses'));
-            } catch (error) {
-                showJson('addresses-output', `خطأ: ${error.message}`);
-            }
-        }
-
-        async function loadWebhooks() {
-            try {
-                showJson('webhooks-output', await apiRequest('/api/shipbee/webhooks'));
-            } catch (error) {
-                showJson('webhooks-output', `خطأ: ${error.message}`);
-            }
-        }
-
-        async function loadAccountData() {
-            await Promise.all([loadAddresses(), loadWebhooks()]);
-        }
-
-        async function loadReferenceData(kind) {
-            try {
-                showJson('reference-output', await apiRequest(`/api/shipbee/${kind}`));
-            } catch (error) {
-                showJson('reference-output', `خطأ: ${error.message}`);
-            }
-        }
-
-        document.querySelectorAll('.nav-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                document.querySelectorAll('.nav-btn').forEach(item => item.classList.remove('active'));
-                document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-                button.classList.add('active');
-                document.getElementById(`view-${button.dataset.view}`).classList.add('active');
-            });
+    async function loadLogs() {
+      try {
+        logs = await apiRequest('/api/logs');
+        if (!Array.isArray(logs)) throw new Error('Invalid logs response');
+        const groups = new Map();
+        logs.forEach(log => {
+          const key = String(log.orderId || log.id);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(log);
         });
+        document.getElementById('s-total').textContent = groups.size;
+        let success = 0, failed = 0, pending = 0;
+        groups.forEach(group => {
+          const status = statusFor(group);
+          if (status.style === 'b-success') success++;
+          else if (status.style === 'b-failed') failed++;
+          else pending++;
+        });
+        document.getElementById('s-success').textContent = success;
+        document.getElementById('s-failed').textContent = failed;
+        document.getElementById('s-pending').textContent = pending;
+        const tbody = document.getElementById('tbody');
+        if (!groups.size) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty">No orders found.</td></tr>';
+          document.getElementById('log-details').innerHTML = '';
+          return;
+        }
+        tbody.innerHTML = [...groups.entries()].map(([orderId, group]) => {
+          const first = group[0];
+          const summaryLog = group.find(item => item.orderSummary) || first;
+          const summary = summaryLog.orderSummary || {};
+          const status = statusFor(group);
+          const quote = quoteFor(group) || hydrated.get(orderId)?.shippingQuote;
+          const details = hydrated.get(orderId);
+          const shipbeeLog = group.find(item => item.type === 'shipbee_response');
+          const shipbeeNo = shipbeeLog?.shipbeeResponse?.data?.orderNo ||
+            shipbeeLog?.shipbeePayload?.orderNo || null;
+          return `<tr class="order-row" data-order-id="${escapeHtml(orderId)}">
+            <td>${escapeHtml(new Date(first.at).toLocaleString('en'))}</td>
+            <td><strong>#${escapeHtml(summaryLog.orderNumber || first.orderNumber || orderId)}</strong>${shipbeeNo ? `<br><span class="muted">ShipBee ${escapeHtml(shipbeeNo)}</span>` : ''}</td>
+            <td>${escapeHtml(summary.customerName || first.customer || 'N/A')}</td>
+            <td>${escapeHtml(details?.country || first.country || 'N/A')}</td>
+            <td>${escapeHtml(amount(details?.total || summaryLog.total, details?.currency || summaryLog.currency))}</td>
+            <td>${escapeHtml(quoteAmount(quote))}</td>
+            <td><span class="badge ${status.style}">${escapeHtml(status.label)}</span></td>
+            <td>${escapeHtml(status.tracking || '—')}</td>
+            <td><div class="actions">
+              <button class="btn small" type="button" data-action="cancel" data-order-id="${escapeHtml(orderId)}" data-shipbee-no="${escapeHtml(shipbeeNo || '')}">Cancel</button>
+            </div></td>
+          </tr>`;
+        }).join('');
+        if (selectedOrderId && relatedLogs(selectedOrderId).length) renderDetails(selectedOrderId);
+      } catch (error) {
+        document.getElementById('tbody').innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
 
-        document.getElementById('tbody').addEventListener('click', event => {
-            const row = event.target.closest('tr[data-order-id]');
-            if (!row) return;
-            const orderId = row.dataset.orderId;
-            if (orderId) {
-                selectedOrderId = orderId;
-                renderOrderDetails(selectedOrderId);
-                const logs = getOrderLogs(selectedOrderId);
-                const hasSavedDetails = Boolean(getOrderSummary(logs).items && getShippingQuote(logs));
-                if (!hasSavedDetails && !hydratedOrders.has(String(selectedOrderId))) {
-                    refreshOrderDetails(selectedOrderId);
-                }
+    async function loadOrderDetails(orderId) {
+      const details = await apiRequest(`/api/shopify/orders/${encodeURIComponent(orderId)}/details`);
+      hydrated.set(String(orderId), details);
+      return details;
+    }
+
+    async function renderDetails(orderId) {
+      const group = relatedLogs(orderId);
+      const status = statusFor(group);
+      let details = hydrated.get(String(orderId));
+      if (!details) {
+        try { details = await loadOrderDetails(orderId); } catch (error) {
+          document.getElementById('log-details').innerHTML = `<p class="warning">Could not load Shopify details: ${escapeHtml(error.message)}</p>`;
+          return;
+        }
+      }
+      const packageLog = group.find(item => item.packageDetails);
+      const packageDetails = details.packageDetails || packageLog?.packageDetails || { actualWeightKg: '', length: '', width: '', height: '' };
+      const items = details.items || [];
+      const itemRows = items.length ? items.map(item =>
+        `<tr><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.sku || '—')}</td><td>${escapeHtml(item.quantity)}</td><td>${escapeHtml(amount(item.unitPrice, details.currency))}</td></tr>`
+      ).join('') : '<tr><td colspan="4" class="empty">No product details available.</td></tr>';
+      const tracking = status.tracking ? status.tracking : 'Not issued';
+      const shipbeeNo = group.find(item => item.shipbeeOrderNo)?.shipbeeOrderNo ||
+        group.find(item => item.shipbeeResponse?.data?.orderNo)?.shipbeeResponse?.data?.orderNo || null;
+      document.getElementById('log-details').innerHTML = `
+        <div class="panel" style="margin:0">
+          <div class="panel-head">
+            <h3>Order #${escapeHtml(details.orderNumber || orderId)}</h3>
+            <div class="actions">
+              <button class="btn small" type="button" onclick="cancelOrder(${JSON.stringify(orderId)}, ${JSON.stringify(shipbeeNo || '')})">Cancel order</button>
+              <button class="btn small" type="button" onclick="refreshOrderDetails(${JSON.stringify(orderId)})">Refresh</button>
+            </div>
+          </div>
+          <div class="details-grid">
+            <div class="info-card"><strong>Status</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
+            <div class="info-card"><strong>Customer</strong>${escapeHtml(details.customerName || 'N/A')}</div>
+            <div class="info-card"><strong>Total</strong>${escapeHtml(amount(details.total, details.currency))}</div>
+            <div class="info-card"><strong>Destination</strong>${escapeHtml([details.city, details.country].filter(Boolean).join(', ') || 'N/A')}</div>
+            <div class="info-card"><strong>Tracking</strong>${escapeHtml(tracking)}</div>
+            <div class="info-card"><strong>ShipBee order</strong>${escapeHtml(shipbeeNo || 'Not issued')}</div>
+            <div class="info-card"><strong>Carrier quote</strong>${escapeHtml(quoteAmount(details.shippingQuote))}</div>
+            <div class="info-card"><strong>Dimensions</strong>${escapeHtml(packageDetails.length)} × ${escapeHtml(packageDetails.width)} × ${escapeHtml(packageDetails.height)} cm</div>
+          </div>
+          <div class="retry-box">
+            <h3>Edit package and resend</h3>
+            <p class="muted" style="margin:5px 0 10px">Available for every order state. Adjust the package first, then resend to ShipBee.</p>
+            <form id="retry-form" class="form-grid">
+              <div><label for="retry-weight">Weight (kg)</label><input id="retry-weight" type="number" min="0.01" step="0.01" required value="${escapeHtml(packageDetails.actualWeightKg || '')}"></div>
+              <div><label for="retry-length">Length (cm)</label><input id="retry-length" type="number" min="1" step="0.1" required value="${escapeHtml(packageDetails.length || '')}"></div>
+              <div><label for="retry-width">Width (cm)</label><input id="retry-width" type="number" min="1" step="0.1" required value="${escapeHtml(packageDetails.width || '')}"></div>
+              <div><label for="retry-height">Height (cm)</label><input id="retry-height" type="number" min="1" step="0.1" required value="${escapeHtml(packageDetails.height || '')}"></div>
+              <button class="btn primary" type="submit">Resend order</button>
+            </form>
+            <p id="retry-message" class="muted" style="margin:10px 0 0"></p>
+          </div>
+          <details>
+            <summary>Products</summary>
+            <div class="table-wrap" style="margin-top:10px">
+              <table><thead><tr><th>Product</th><th>SKU</th><th>Quantity</th><th>Unit price</th></tr></thead><tbody>${itemRows}</tbody></table>
+            </div>
+          </details>
+          <details>
+            <summary>Integration events</summary>
+            <pre>${escapeHtml(JSON.stringify(group, null, 2))}</pre>
+          </details>
+        </div>`;
+      document.getElementById('retry-form').addEventListener('submit', event => resendOrder(event, orderId));
+    }
+
+    async function refreshOrderDetails(orderId) {
+      hydrated.delete(String(orderId));
+      await renderDetails(orderId);
+    }
+
+    async function resendOrder(event, orderId) {
+      event.preventDefault();
+      if (!confirm(`Resend Shopify order #${orderId} to ShipBee with the entered package dimensions?`)) return;
+      const message = document.getElementById('retry-message');
+      message.textContent = 'Sending...';
+      try {
+        const data = await apiRequest(`/api/shipbee/orders/${encodeURIComponent(orderId)}/retry`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            confirm: `RETRY ${orderId}`,
+            package: {
+              actualWeightKg: Number(document.getElementById('retry-weight').value),
+              length: Number(document.getElementById('retry-length').value),
+              width: Number(document.getElementById('retry-width').value),
+              height: Number(document.getElementById('retry-height').value)
             }
+          })
         });
+        message.textContent = data.tracking ? `Resent successfully. Tracking: ${data.tracking}` : 'Retry submitted successfully.';
+        await loadLogs();
+      } catch (error) {
+        message.textContent = `Retry failed: ${error.message}`;
+      }
+    }
 
-        const today = new Date();
-        const monthAgo = new Date(today);
-        monthAgo.setDate(monthAgo.getDate() - 30);
-        const dateValue = date => [
-            date.getFullYear(),
-            String(date.getMonth() + 1).padStart(2, '0'),
-            String(date.getDate()).padStart(2, '0')
-        ].join('-');
-        ['overview', 'report'].forEach(prefix => {
-            document.getElementById(`${prefix}-start`).value = dateValue(monthAgo);
-            document.getElementById(`${prefix}-end`).value = dateValue(today);
+    async function cancelOrder(orderId, shipbeeOrderNo) {
+      let orderNo = shipbeeOrderNo;
+      if (!orderNo) orderNo = prompt('Enter the ShipBee order number to cancel:');
+      if (!orderNo) return;
+      if (!confirm(`Cancel ShipBee order ${orderNo}?`)) return;
+      try {
+        const data = await apiRequest('/api/shipbee/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderNo, confirm: `CANCEL ${orderNo}` })
         });
+        alert(JSON.stringify(data, null, 2));
+      } catch (error) {
+        alert(error.message);
+      }
+    }
 
-        document.getElementById('overview-report-form').addEventListener('submit', event => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            runForm(form, 'overview-report', data =>
-                loadReport(data.get('startDate'), data.get('endDate'), 'overview-report'));
+    async function clearLogs() {
+      if (!confirm('Clear local integration logs?')) return;
+      await apiRequest('/api/logs', { method: 'DELETE' });
+      selectedOrderId = null;
+      await loadLogs();
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.nav-btn').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById(`view-${button.dataset.view}`).classList.add('active');
+    }));
+
+    document.getElementById('tbody').addEventListener('click', event => {
+      const cancelButton = event.target.closest('[data-action="cancel"]');
+      if (cancelButton) {
+        event.stopPropagation();
+        cancelOrder(cancelButton.dataset.orderId, cancelButton.dataset.shipbeeNo);
+        return;
+      }
+      const row = event.target.closest('tr[data-order-id]');
+      if (!row) return;
+      selectedOrderId = row.dataset.orderId;
+      renderDetails(selectedOrderId);
+    });
+
+    const today = new Date();
+    const monthAgo = new Date(today);
+    monthAgo.setDate(today.getDate() - 30);
+    const dateValue = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    document.getElementById('report-start').value = dateValue(monthAgo);
+    document.getElementById('report-end').value = dateValue(today);
+
+    document.getElementById('report-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const params = new URLSearchParams({
+        startDate: document.getElementById('report-start').value,
+        endDate: document.getElementById('report-end').value
+      });
+      try { showJson('report-output', await apiRequest(`/api/shipbee/report?${params}`)); }
+      catch (error) { showJson('report-output', { success: false, message: error.message }); }
+    });
+
+    document.getElementById('lookup-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const kind = document.getElementById('lookup-kind').value;
+      const value = document.getElementById('lookup-value').value.trim();
+      const query = new URLSearchParams({ [kind]: value });
+      if (document.getElementById('lookup-refresh').checked) query.set('refresh', 'true');
+      try {
+        const results = {};
+        if (kind === 'orderNo' || kind === 'orderId') results.status = await apiRequest(`/api/shipbee/status?${query}`);
+        results.tracking = await apiRequest(`/api/shipbee/tracking?${query}`);
+        showJson('lookup-output', results);
+      } catch (error) { showJson('lookup-output', { success: false, message: error.message }); }
+    });
+
+    document.getElementById('pricing-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const params = new URLSearchParams({
+        fromCountry: document.getElementById('price-from-country').value,
+        fromCity: document.getElementById('price-from-city').value,
+        toCountry: document.getElementById('price-to-country').value,
+        toCity: document.getElementById('price-to-city').value,
+        weight: document.getElementById('price-weight').value,
+        length: document.getElementById('price-length').value,
+        width: document.getElementById('price-width').value,
+        height: document.getElementById('price-height').value,
+        incoterm: document.getElementById('price-incoterm').value
+      });
+      const carrier = document.getElementById('price-carrier').value;
+      if (carrier) params.set('shippingCompany', carrier);
+      const date = document.getElementById('price-date').value;
+      if (date) params.set('plannedShippingDate', date);
+      try { showJson('pricing-output', await apiRequest(`/api/shipbee/pricing?${params}`)); }
+      catch (error) { showJson('pricing-output', { success: false, message: error.message }); }
+    });
+
+    async function loadAddresses() {
+      try { showJson('addresses-output', await apiRequest('/api/shipbee/addresses')); }
+      catch (error) { showJson('addresses-output', { success: false, message: error.message }); }
+    }
+    async function loadReference(kind) {
+      try { showJson('reference-output', await apiRequest(`/api/shipbee/${kind}`)); }
+      catch (error) { showJson('reference-output', { success: false, message: error.message }); }
+    }
+
+    async function loadTestOptions() {
+      try {
+        const data = await apiRequest('/api/shipbee/test-order/options');
+        testProducts = data.products || [];
+        testRecipients = data.recipients || [];
+        document.getElementById('test-product').innerHTML = '<option value="">Select product</option>' +
+          testProducts.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} (${escapeHtml(item.weightKg)} kg)</option>`).join('');
+        document.getElementById('test-recipient').innerHTML = '<option value="">Select recipient</option>' +
+          testRecipients.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join('');
+        document.getElementById('test-product').disabled = false;
+        document.getElementById('test-recipient').disabled = false;
+        document.getElementById('test-submit').disabled = false;
+      } catch (error) {
+        showJson('test-output', { success: false, message: error.message });
+      }
+    }
+    document.getElementById('test-order-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const productId = Number(document.getElementById('test-product').value);
+      const recipientId = document.getElementById('test-recipient').value;
+      const quantity = Number(document.getElementById('test-quantity').value);
+      const unitPrice = Number(document.getElementById('test-unit-price').value);
+      if (!confirm('Send this test order to ShipBee? This may create a real shipment or charge.')) return;
+      try {
+        const data = await apiRequest('/api/shipbee/test-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId, recipientId, quantity, unitPrice, confirm: 'SEND TEST ORDER' })
         });
+        showJson('test-output', data);
+      } catch (error) { showJson('test-output', { success: false, message: error.message }); }
+    });
 
-        document.getElementById('report-form').addEventListener('submit', event => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            runForm(form, 'report-output', data =>
-                loadReport(data.get('startDate'), data.get('endDate'), 'report-output'));
-        });
-
-        document.getElementById('lookup-form').addEventListener('submit', event => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            runForm(form, 'lookup-output', async data => {
-                const kind = document.getElementById('lookup-kind').value;
-                const value = document.getElementById('lookup-value').value.trim();
-                const query = new URLSearchParams({ [kind]: value });
-                const results = {};
-                if (kind === 'orderNo' || kind === 'orderId') {
-                    results.status = await apiRequest(`/api/shipbee/status?${query}`);
-                }
-                if (document.getElementById('lookup-refresh').checked) query.set('refresh', 'true');
-                results.tracking = await apiRequest(`/api/shipbee/tracking?${query}`);
-                return results;
-            });
-        });
-
-        document.getElementById('cancel-form').addEventListener('submit', event => {
-            event.preventDefault();
-            const orderNo = document.getElementById('cancel-order-no').value.trim();
-            if (!confirm(`سيتم إرسال طلب إلغاء حقيقي إلى ShipBee للطلب رقم ${orderNo}. هل تريد المتابعة؟`)) {
-                document.getElementById('cancel-output').textContent = 'لم يتم إرسال طلب الإلغاء.';
-                return;
-            }
-            runForm(event.currentTarget, 'cancel-output', () =>
-                apiRequest('/api/shipbee/cancel', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderNo, confirm: `CANCEL ${orderNo}` })
-                })
-            );
-        });
-
-        document.getElementById('pricing-form').addEventListener('submit', event => {
-            event.preventDefault();
-            runForm(event.currentTarget, 'pricing-output', async () => {
-                const params = new URLSearchParams({
-                    fromCountry: document.getElementById('price-from-country').value.trim(),
-                    fromCity: document.getElementById('price-from-city').value.trim(),
-                    toCountry: document.getElementById('price-to-country').value.trim(),
-                    toCity: document.getElementById('price-to-city').value.trim(),
-                    weight: document.getElementById('price-weight').value,
-                    length: document.getElementById('price-length').value,
-                    width: document.getElementById('price-width').value,
-                    height: document.getElementById('price-height').value,
-                    incoterm: document.getElementById('price-incoterm').value,
-                    isDocument: String(document.getElementById('price-document').checked),
-                    isDangerous: String(document.getElementById('price-dangerous').checked)
-                });
-                const optionalFields = {
-                    fromPostCode: 'price-from-postcode',
-                    toPostCode: 'price-to-postcode',
-                    toDistrict: 'price-district',
-                    shippingCompany: 'price-carrier',
-                    plannedShippingDate: 'price-date',
-                    packages: 'price-packages'
-                };
-                for (const [parameter, elementId] of Object.entries(optionalFields)) {
-                    const value = document.getElementById(elementId).value.trim();
-                    if (value) params.set(parameter, value);
-                }
-                return apiRequest(`/api/shipbee/pricing?${params}`);
-            });
-        });
-
-        document.getElementById('test-order-product').addEventListener('change', updateTestOrderPreview);
-        document.getElementById('test-order-recipient').addEventListener('change', updateTestOrderPreview);
-        document.getElementById('test-order-quantity').addEventListener('input', updateTestOrderPreview);
-        document.getElementById('test-order-unit-price').addEventListener('input', updateTestOrderPreview);
-        document.getElementById('test-order-form').addEventListener('submit', event => {
-            event.preventDefault();
-            if (testOrderSubmitting) return;
-
-            const product = testOrderProducts.find(item =>
-                String(item.id) === document.getElementById('test-order-product').value);
-            const recipient = testOrderRecipients.find(item =>
-                item.id === document.getElementById('test-order-recipient').value);
-            const quantity = Number(document.getElementById('test-order-quantity').value);
-            const unitPrice = Number(document.getElementById('test-order-unit-price').value);
-            const environment = shipbeeEnvironment || 'غير معروفة';
-            if (!product || !recipient) {
-                document.getElementById('test-order-output').textContent = 'اختر المنتج والعميل التجريبي أولًا.';
-                return;
-            }
-
-            const confirmation = `سيتم إرسال أوردر فعلي إلى ShipBee (${environment}) باستخدام بيانات عميل خيالية. قد ينشأ عنه شحن أو رسوم. المنتج: ${product.name}، الوجهة: ${recipient.label}. متابعة؟`;
-            if (!confirm(confirmation)) {
-                document.getElementById('test-order-output').textContent = 'تم إلغاء الإرسال.';
-                return;
-            }
-            if (environment === 'production' && prompt('أنت على بيئة Production. اكتب SEND TEST ORDER للتأكيد:') !== 'SEND TEST ORDER') {
-                document.getElementById('test-order-output').textContent = 'لم يتم التأكيد؛ لم يُرسل الطلب.';
-                return;
-            }
-
-            testOrderSubmitting = true;
-            updateTestOrderSubmitState();
-            runForm(event.currentTarget, 'test-order-output', async () => {
-                try {
-                    return await apiRequest('/api/shipbee/test-order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            productId: product.id,
-                            recipientId: recipient.id,
-                            quantity,
-                            unitPrice,
-                            confirm: 'SEND TEST ORDER'
-                        })
-                    });
-                } finally {
-                    testOrderSubmitting = false;
-                    updateTestOrderSubmitState();
-                }
-            });
-        });
-
-        document.getElementById('webhook-register-form').addEventListener('submit', event => {
-            event.preventDefault();
-            runForm(event.currentTarget, 'webhooks-output', async () => {
-                const url = document.getElementById('webhook-url').value.trim();
-                const type = document.getElementById('webhook-type').value;
-                if (!confirm(`تسجيل Webhook من نوع ${type} على ShipBee؟`)) throw new Error('تم إلغاء التأكيد');
-                return apiRequest('/api/shipbee/webhooks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, type, confirm: `REGISTER ${type}` })
-                });
-            }).then(loadWebhooks);
-        });
-
-        document.getElementById('webhook-delete-form').addEventListener('submit', event => {
-            event.preventDefault();
-            runForm(event.currentTarget, 'webhooks-output', async () => {
-                const type = document.getElementById('webhook-delete-type').value;
-                const url = document.getElementById('webhook-delete-url').value.trim();
-                const scope = url || 'ALL';
-                if (!confirm(`حذف Webhook من نوع ${type} والنطاق ${scope}؟`)) {
-                    throw new Error('تم إلغاء التأكيد');
-                }
-                const confirmText = `DELETE ${type} ${scope}`;
-                return apiRequest('/api/shipbee/webhooks', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, url, confirm: confirmText })
-                });
-            }).then(loadWebhooks);
-        });
-
-        loadEnvironment();
-        loadTestOrderOptions();
-        loadLogs();
-        loadAccountData();
-        loadReferenceData('countries');
-        setInterval(loadLogs, 5000);
-    </script>
+    loadEnvironment();
+    loadLogs();
+    loadAddresses();
+    loadTestOptions();
+    setInterval(loadLogs, 5000);
+  </script>
 </body>
-
 </html>

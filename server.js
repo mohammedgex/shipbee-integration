@@ -642,7 +642,19 @@ function getShippingRecipientName(address, customer) {
     return addressName || addressParts || customerName || customerParts || 'Guest';
 }
 
-function getOrderPackage(order) {
+function getOrderPackage(order, packageOverride = null) {
+    if (packageOverride) {
+        const fields = ['actualWeightKg', 'length', 'width', 'height'];
+        if (fields.some(field => !Number.isFinite(Number(packageOverride[field])) || Number(packageOverride[field]) <= 0)) {
+            throw new Error('Package weight and dimensions must be numbers greater than zero');
+        }
+        return {
+            actualWeightKg: Number(packageOverride.actualWeightKg),
+            length: Number(packageOverride.length),
+            width: Number(packageOverride.width),
+            height: Number(packageOverride.height)
+        };
+    }
     const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
     if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
 
@@ -907,7 +919,7 @@ function redactShipBeeDiagnostic(value, key) {
 // ==========================================
 // 6. إرسال ShipBee
 // ==========================================
-async function sendToShipBee(shopifyOrder) {
+async function sendToShipBee(shopifyOrder, packageOverride = null) {
     if (!shopifyOrder.shipping_address) {
         throw new Error('لا يوجد عنوان شحن');
     }
@@ -916,7 +928,7 @@ async function sendToShipBee(shopifyOrder) {
     const currency = shopifyOrder.currency;
     const lineItems = Array.isArray(shopifyOrder.line_items) ? shopifyOrder.line_items : [];
     if (!lineItems.length) throw new Error('الطلب لا يحتوي على منتجات للشحن');
-    const packageDetails = getOrderPackage(shopifyOrder);
+    const packageDetails = getOrderPackage(shopifyOrder, packageOverride);
 
     const missing = [];
     if (!addr.address1) missing.push('address1');
@@ -1896,6 +1908,160 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
         quoteDiagnostic
     });
 });
+
+app.post('/api/shipbee/orders/:orderId/retry', requireDashboardAuth, async (req, res) => {
+    const orderId = String(req.params.orderId || '');
+    if (!/^\d+$/.test(orderId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Shopify order ID' });
+    }
+    if (!SHOPIFY_DOMAIN) {
+        return res.status(503).json({ success: false, message: 'SHOPIFY_STORE_DOMAIN is not configured' });
+    }
+
+    const body = req.body || {};
+    if (body.confirm !== `RETRY ${orderId}`) {
+        return res.status(400).json({ success: false, message: `Confirmation required: RETRY ${orderId}` });
+    }
+
+    const override = body.package && {
+        actualWeightKg: body.package.actualWeightKg,
+        length: body.package.length,
+        width: body.package.width,
+        height: body.package.height
+    };
+    const fields = override ? ['actualWeightKg', 'length', 'width', 'height'] : [];
+    if (fields.some(field => !Number.isFinite(Number(override[field])) || Number(override[field]) <= 0)) {
+        return res.status(400).json({ success: false, message: 'Weight and dimensions must be numbers greater than zero' });
+    }
+
+    let shopifyResponse;
+    try {
+        const token = await getShopifyToken();
+        shopifyResponse = await axios.get(
+            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`,
+            {
+                headers: { 'X-Shopify-Access-Token': token },
+                timeout: 15000
+            }
+        );
+    } catch (error) {
+        const message = describeAxiosError(error, 'Shopify GET order for retry');
+        return res.status(error.response ? 502 : 503).json({ success: false, message });
+    }
+
+    const order = shopifyResponse.data && shopifyResponse.data.order;
+    if (!order) {
+        return res.status(404).json({ success: false, message: 'Shopify returned no order data' });
+    }
+
+    try {
+        const startedAt = Date.now();
+        const result = await sendToShipBee(order, override);
+        const shipment = result.response && result.response.data && result.response.data.shipment || {};
+        const tracking = shipment.trackingNumber;
+
+        await pushLog({
+            type: 'shipbee_response',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            packageDetails: result.packageDetails,
+            shippingQuote: result.shippingQuote,
+            shippingQuoteError: result.shippingQuoteError,
+            shippingQuoteDiagnostic: result.shippingQuoteDiagnostic,
+            paymentMethod: result.payload.paymentMethod,
+            shipbeeHttpStatus: result.shipbeeHttpStatus,
+            shipbeeRequestId: result.shipbeeRequestId,
+            shipbeeErrorCode: getShipBeeErrorCode(result.response),
+            shipbeePayload: result.payload,
+            shipbeeResponse: result.response,
+            status: result.response.success ? 'shipbee_ok' : 'shipbee_failed'
+        });
+
+        if (!result.response.success) {
+            return res.status(400).json(result.response);
+        }
+        if (!tracking) {
+            await pushLog({
+                type: 'error',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                shipbeeOrderId: result.response.data && result.response.data.id,
+                shipbeeOrderNo: result.response.data && result.response.data.orderNo,
+                packageDetails: result.packageDetails,
+                error: 'ShipBee accepted the order but returned no tracking number',
+                integrationErrorCode: 'MONTHLY_BILL_TRACKING_NUMBER_MISSING',
+                status: 'error'
+            });
+            return res.status(502).json({
+                success: false,
+                message: 'ShipBee accepted the order but returned no tracking number',
+                packageDetails: result.packageDetails
+            });
+        }
+
+        try {
+            const fulfillment = await fulfillShopifyOrder(
+                order.id,
+                tracking,
+                shipment.shippingCompany || SHIPPING_COMPANY
+            );
+            await pushLog({
+                type: 'success',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                customer: order.email || (order.customer && order.customer.email),
+                country: order.shipping_address && order.shipping_address.country,
+                total: order.total_price,
+                currency: order.currency,
+                tracking,
+                trackingCompany: shipment.shippingCompany,
+                fulfillmentId: fulfillment.fulfillmentId,
+                packageDetails: result.packageDetails,
+                durationMs: Date.now() - startedAt,
+                status: 'success'
+            });
+            return res.json({
+                success: true,
+                tracking,
+                fulfillmentId: fulfillment.fulfillmentId,
+                packageDetails: result.packageDetails
+            });
+        } catch (error) {
+            await pushLog({
+                type: 'shopify_update_failed',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                tracking,
+                packageDetails: result.packageDetails,
+                error: error.message,
+                status: 'shopify_update_failed'
+            });
+            return res.status(207).json({
+                success: true,
+                tracking,
+                shopifyError: error.message,
+                packageDetails: result.packageDetails
+            });
+        }
+    } catch (error) {
+        await pushLog({
+            type: 'error',
+            orderId: order.id,
+            orderNumber: order.order_number,
+            error: error.message,
+            shipbeeHttpStatus: error.integrationDiagnostic && error.integrationDiagnostic.httpStatus,
+            shipbeeRequestId: error.integrationDiagnostic && error.integrationDiagnostic.requestId,
+            integrationDiagnostic: error.integrationDiagnostic || null,
+            status: 'error'
+        });
+        return res.status(error.integrationDiagnostic && error.integrationDiagnostic.httpStatus || 502).json({
+            success: false,
+            message: error.message,
+            integrationDiagnostic: error.integrationDiagnostic || null
+        });
+    }
+});
+
 app.delete('/api/logs', requireDashboardAuth, async (req, res) => {
     await clearLogs();
     res.json({ ok: true });
