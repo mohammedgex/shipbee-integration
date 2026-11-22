@@ -474,9 +474,10 @@
               <button class="btn small" type="button" onclick="refreshOrderDetails(${JSON.stringify(orderId)})">Refresh</button>
             </div>
           </div>
-          ${details.shopifyAvailable === false ? '<p class="warning">Shopify could not return this order. Showing saved integration data; retrying will require Shopify order access. Check that the store domain is correct, and for orders older than 60 days grant read_all_orders and reauthorize the app.</p>' : ''}
+          ${details.shopifyAvailable === false ? `<p class="warning">Shopify could not return this order. Showing saved integration data. ${escapeHtml(details.shopifyAccessMessage || 'Check the active Shopify token scopes and order ID.')}</p>` : ''}
           <div class="details-grid">
             <div class="info-card"><strong>Status</strong><span class="badge ${status.style}">${escapeHtml(status.label)}</span></div>
+            <div class="info-card"><strong>Shopify order ID</strong>${escapeHtml(details.orderId || orderId)}</div>
             <div class="info-card"><strong>Customer</strong>${escapeHtml(details.customerName || 'N/A')}</div>
             <div class="info-card"><strong>Total</strong>${escapeHtml(amount(details.total, details.currency))}</div>
             <div class="info-card"><strong>Destination</strong>${escapeHtml([details.city, details.country].filter(Boolean).join(', ') || 'N/A')}</div>

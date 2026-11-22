@@ -51,79 +51,78 @@ const SHIPPING_COMPANY_CODE = 'QATAR_POST';
 const SHIPBEE_SITE_ID = process.env.SHIPBEE_SITE_ID || 'express-staging';
 const CARRIER_RATE_CURRENCY = 'QAR';
 const PLANNED_SHIPPING_DAYS_AHEAD = 6;
-const TEST_RECIPIENT_PROFILES = [
-    {
-        id: 'qa-qatar',
-        label: 'قطر — الدوحة (بيانات خيالية)',
-        name: 'ShipBee QA Test - Qatar',
-        country: 'Qatar',
-        city: 'Doha',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '',
-        phone: '+97400000000',
-        email: 'shipbee-test-qatar@example.com'
-    },
-    {
-        id: 'qa-saudi',
-        label: 'السعودية — الرياض (بيانات خيالية)',
-        name: 'ShipBee QA Test - Saudi Arabia',
-        country: 'Saudi Arabia',
-        city: 'Riyadh',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '00000',
-        phone: '+966000000000',
-        email: 'shipbee-test-saudi@example.com'
-    },
-    {
-        id: 'qa-uae',
-        label: 'الإمارات — دبي (بيانات خيالية)',
-        name: 'ShipBee QA Test - UAE',
-        country: 'United Arab Emirates',
-        city: 'Dubai',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '',
-        phone: '+971000000000',
-        email: 'shipbee-test-uae@example.com'
-    },
-    {
-        id: 'qa-kuwait',
-        label: 'الكويت — مدينة الكويت (بيانات خيالية)',
-        name: 'ShipBee QA Test - Kuwait',
-        country: 'Kuwait',
-        city: 'Kuwait City',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '00000',
-        phone: '+96500000000',
-        email: 'shipbee-test-kuwait@example.com'
-    },
-    {
-        id: 'qa-bahrain',
-        label: 'البحرين — المنامة (بيانات خيالية)',
-        name: 'ShipBee QA Test - Bahrain',
-        country: 'Bahrain',
-        city: 'Manama',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '0000',
-        phone: '+97300000000',
-        email: 'shipbee-test-bahrain@example.com'
-    },
-    {
-        id: 'qa-oman',
-        label: 'عُمان — مسقط (بيانات خيالية)',
-        name: 'ShipBee QA Test - Oman',
-        country: 'Oman',
-        city: 'Muscat',
-        address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
-        address2: 'QA Test District',
-        zip: '00000',
-        phone: '+96800000000',
-        email: 'shipbee-test-oman@example.com'
-    }
+const TEST_RECIPIENT_PROFILES = [{
+    id: 'qa-qatar',
+    label: 'قطر — الدوحة (بيانات خيالية)',
+    name: 'ShipBee QA Test - Qatar',
+    country: 'Qatar',
+    city: 'Doha',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '',
+    phone: '+97400000000',
+    email: 'shipbee-test-qatar@example.com'
+},
+{
+    id: 'qa-saudi',
+    label: 'السعودية — الرياض (بيانات خيالية)',
+    name: 'ShipBee QA Test - Saudi Arabia',
+    country: 'Saudi Arabia',
+    city: 'Riyadh',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '00000',
+    phone: '+966000000000',
+    email: 'shipbee-test-saudi@example.com'
+},
+{
+    id: 'qa-uae',
+    label: 'الإمارات — دبي (بيانات خيالية)',
+    name: 'ShipBee QA Test - UAE',
+    country: 'United Arab Emirates',
+    city: 'Dubai',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '',
+    phone: '+971000000000',
+    email: 'shipbee-test-uae@example.com'
+},
+{
+    id: 'qa-kuwait',
+    label: 'الكويت — مدينة الكويت (بيانات خيالية)',
+    name: 'ShipBee QA Test - Kuwait',
+    country: 'Kuwait',
+    city: 'Kuwait City',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '00000',
+    phone: '+96500000000',
+    email: 'shipbee-test-kuwait@example.com'
+},
+{
+    id: 'qa-bahrain',
+    label: 'البحرين — المنامة (بيانات خيالية)',
+    name: 'ShipBee QA Test - Bahrain',
+    country: 'Bahrain',
+    city: 'Manama',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '0000',
+    phone: '+97300000000',
+    email: 'shipbee-test-bahrain@example.com'
+},
+{
+    id: 'qa-oman',
+    label: 'عُمان — مسقط (بيانات خيالية)',
+    name: 'ShipBee QA Test - Oman',
+    country: 'Oman',
+    city: 'Muscat',
+    address1: 'QA TEST ONLY - NOT A REAL ADDRESS',
+    address2: 'QA Test District',
+    zip: '00000',
+    phone: '+96800000000',
+    email: 'shipbee-test-oman@example.com'
+}
 ];
 
 function getPlannedShippingDate() {
@@ -816,6 +815,32 @@ async function getShopifyToken(forceRefresh = false) {
         if (cachedToken) return cachedToken;
         throw new Error('فشل الحصول على Shopify token: ' + (e.response ? JSON.stringify(e.response.data) : e.message));
     }
+}
+
+async function getShopifyAccessScopes() {
+    const token = await getShopifyToken();
+    const response = await axios.get(
+        `https://${SHOPIFY_DOMAIN}/admin/oauth/access_scopes.json`,
+        {
+            headers: { 'X-Shopify-Access-Token': token },
+            timeout: 10000
+        }
+    );
+    const scopes = response.data && response.data.access_scopes;
+    if (!Array.isArray(scopes)) {
+        throw new Error('Shopify returned an invalid access scopes response');
+    }
+    return scopes.map(scope => String(scope.handle || ''));
+}
+
+function getShopifyOrderNotFoundMessage(accessScopes) {
+    if (Array.isArray(accessScopes) && !accessScopes.includes('read_orders')) {
+        return 'The active Shopify token does not have read_orders access. Update the app permissions, approve the updated permissions for this store, and refresh SHOPIFY_ACCESS_TOKEN if a static token is configured.';
+    }
+    if (Array.isArray(accessScopes)) {
+        return 'The active Shopify token has read_orders access, but Shopify returned 404. Verify that the displayed Shopify order ID belongs to this store and that the order still exists.';
+    }
+    return 'Shopify returned 404 and the active token scopes could not be verified. Check read_orders access, the Shopify order ID, and that the order belongs to this store.';
 }
 
 // ==========================================
@@ -1853,6 +1878,15 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
         );
     } catch (error) {
         if (error.response && error.response.status === 404) {
+            let accessScopes = null;
+            try {
+                accessScopes = await getShopifyAccessScopes();
+            } catch (scopeError) {
+                console.warn('[dashboard-order-details] could not verify Shopify access scopes', {
+                    status: scopeError.response && scopeError.response.status || null,
+                    message: scopeError.message
+                });
+            }
             const orderLogs = (await getLogs()).filter(log =>
                 String(log.orderId) === orderId
             );
@@ -1864,6 +1898,8 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
                 return res.json({
                     success: true,
                     shopifyAvailable: false,
+                    shopifyAccessMessage: getShopifyOrderNotFoundMessage(accessScopes),
+                    shopifyAccessScopes: accessScopes,
                     orderId,
                     orderNumber: summaryLog.orderNumber || null,
                     customerName: summary.customerName || summaryLog.customer || null,
@@ -1882,7 +1918,7 @@ app.get('/api/shopify/orders/:orderId/details', requireDashboardAuth, async (req
             }
             return res.status(404).json({
                 success: false,
-                message: 'Shopify returned 404 for this order, and no saved integration details are available. Verify SHOPIFY_STORE_DOMAIN and the order ID. For orders older than 60 days, grant read_all_orders in addition to read_orders, then reauthorize the Shopify app and update its access token.'
+                message: getShopifyOrderNotFoundMessage(accessScopes)
             });
         }
         const message = describeAxiosError(error, 'Shopify GET order details');
@@ -1971,17 +2007,25 @@ app.post('/api/shipbee/orders/:orderId/retry', requireDashboardAuth, async (req,
     try {
         const token = await getShopifyToken();
         shopifyResponse = await axios.get(
-            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`,
-            {
-                headers: { 'X-Shopify-Access-Token': token },
-                timeout: 15000
-            }
+            `https://${SHOPIFY_DOMAIN}/admin/api/${SHOPIFY_VERSION}/orders/${orderId}.json`, {
+            headers: { 'X-Shopify-Access-Token': token },
+            timeout: 15000
+        }
         );
     } catch (error) {
         if (error.response && error.response.status === 404) {
+            let accessScopes = null;
+            try {
+                accessScopes = await getShopifyAccessScopes();
+            } catch (scopeError) {
+                console.warn('[dashboard-order-retry] could not verify Shopify access scopes', {
+                    status: scopeError.response && scopeError.response.status || null,
+                    message: scopeError.message
+                });
+            }
             return res.status(404).json({
                 success: false,
-                message: 'Shopify could not find this order in the configured store. Verify SHOPIFY_STORE_DOMAIN and the order ID. For orders older than 60 days, grant read_all_orders in addition to read_orders, then reauthorize the Shopify app and update its access token.'
+                message: getShopifyOrderNotFoundMessage(accessScopes)
             });
         }
         const message = describeAxiosError(error, 'Shopify GET order for retry');
